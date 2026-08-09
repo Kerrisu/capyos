@@ -2,15 +2,16 @@
 CapyOS Backend
 Etapa 1: Esqueleto do FastAPI (rota /health) - CONCLUÍDA E TESTADA
 Etapa 2: Conexão com Google Sheets + rota /abas
+Etapa 6.2: Migrado de config_pacientes.json (arquivo local) para Postgres (Neon)
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from dotenv import load_dotenv
-import json
 import os
 import logica_escala
+import database
 from models import GerarEscalaRequest, GerarEscalaResponse, PacienteUpsertRequest
 
 DEBUG_TAG = "🔧[CAPYOS-DEBUG]"
@@ -22,36 +23,25 @@ print(f"{DEBUG_TAG} .env carregado (se existir).")
 
 print(f"{DEBUG_TAG} Iniciando módulo main.py...")
 
-CAMINHO_CONFIG_PACIENTES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_pacientes.json")
-
-
-def carregar_config_pacientes():
-    """Carrega o config_pacientes.json do disco do servidor."""
-    print(f"{DEBUG_TAG} Carregando config_pacientes.json de: {CAMINHO_CONFIG_PACIENTES}")
-    if not os.path.exists(CAMINHO_CONFIG_PACIENTES):
-        print(f"{DEBUG_TAG} ERRO: config_pacientes.json não encontrado.")
-        raise FileNotFoundError("config_pacientes.json não encontrado no servidor.")
-
-    with open(CAMINHO_CONFIG_PACIENTES, "r", encoding="utf-8") as f:
-        config = json.load(f)
-    print(f"{DEBUG_TAG} config_pacientes.json carregado. {len(config.get('pacientes', {}))} pacientes cadastrados.")
-    return config
-
-
-def salvar_config_pacientes(config):
-    """Persiste o config_pacientes.json de volta no disco do servidor."""
-    print(f"{DEBUG_TAG} Salvando config_pacientes.json em: {CAMINHO_CONFIG_PACIENTES}")
-    with open(CAMINHO_CONFIG_PACIENTES, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=4)
-    print(f"{DEBUG_TAG} config_pacientes.json salvo com sucesso. {len(config.get('pacientes', {}))} pacientes agora.")
-
 
 def callback_progresso_debug(valor, texto):
     """Substitui o callback que mexia na barra do Tkinter: aqui só logamos."""
     print(f"{DEBUG_TAG} Progresso: {int(valor * 100)}% - {texto}")
 
 
-app = FastAPI(title="CapyOS Backend", version="0.4.0")
+app = FastAPI(title="CapyOS Backend", version="0.5.0")
+
+
+@app.on_event("startup")
+def ao_iniciar():
+    """Garante que as tabelas existem no banco assim que o servidor sobe.
+    Idempotente: seguro rodar toda vez, não duplica nem apaga nada."""
+    print(f"{DEBUG_TAG} Rodando startup: garantindo tabelas do banco...")
+    try:
+        database.criar_tabelas()
+    except database.ErroBancoDados as e:
+        print(f"{DEBUG_TAG} ERRO no startup ao criar tabelas: {e}")
+
 
 # --- CORS: permite que o frontend (rodando em outro domínio/porta) chame essa API ---
 # Em dev local, o React normalmente roda em localhost:3000 (Create React App)
@@ -134,30 +124,30 @@ def listar_abas_planilha(url: str = None):
     Exemplo de chamada: GET /abas?url=https://docs.google.com/spreadsheets/d/XXXX
 
     Se 'url' não for fornecida, cai no fallback de buscar
-    configuracoes_gerais -> url_planilha do config_pacientes.json,
-    igual /gerar-escala já faz. Isso permite o frontend nunca precisar
-    saber/mandar a URL da planilha manualmente.
+    configuracoes_gerais -> url_planilha no banco, igual /gerar-escala já
+    faz. Isso permite o frontend nunca precisar saber/mandar a URL da
+    planilha manualmente.
     """
     print(f"{DEBUG_TAG} Rota /abas foi chamada com url={url}")
 
     if not url:
-        print(f"{DEBUG_TAG} url não fornecida, tentando fallback do config_pacientes.json...")
+        print(f"{DEBUG_TAG} url não fornecida, tentando fallback do banco...")
         try:
-            config = carregar_config_pacientes()
-        except FileNotFoundError as e:
-            print(f"{DEBUG_TAG} ERRO ao carregar config_pacientes.json: {e}")
+            config = database.carregar_config_completo()
+        except database.ErroBancoDados as e:
+            print(f"{DEBUG_TAG} ERRO ao consultar banco: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
         url = config.get("configuracoes_gerais", {}).get("url_planilha")
 
         if not url:
-            print(f"{DEBUG_TAG} ERRO: nenhuma url fornecida nem salva no config.")
+            print(f"{DEBUG_TAG} ERRO: nenhuma url fornecida nem salva no banco.")
             raise HTTPException(
                 status_code=400,
-                detail="Parâmetro 'url' não foi fornecido e não há url_planilha salva no config_pacientes.json."
+                detail="Parâmetro 'url' não foi fornecido e não há url_planilha salva no banco."
             )
 
-        print(f"{DEBUG_TAG} Usando url_planilha do config: {url}")
+        print(f"{DEBUG_TAG} Usando url_planilha do banco: {url}")
 
     abas = logica_escala.listar_abas(url)
 
@@ -202,23 +192,23 @@ def inspecionar_cores_planilha(url: str, nome_aba: str):
 def gerar_escala(request: GerarEscalaRequest):
     """
     Roda o pipeline completo: baixa a planilha, identifica os pacientes
-    (por cor), distribui nas salas seguindo as regras do config_pacientes.json
+    (por cor), distribui nas salas seguindo as regras salvas no banco
     e devolve tanto os dados estruturados quanto o texto pronto pra WhatsApp.
     """
     print(f"{DEBUG_TAG} Rota /gerar-escala chamada. nome_aba={request.nome_aba}")
 
     try:
-        config = carregar_config_pacientes()
-    except FileNotFoundError as e:
-        print(f"{DEBUG_TAG} ERRO ao carregar config_pacientes.json: {e}")
+        config = database.carregar_config_completo()
+    except database.ErroBancoDados as e:
+        print(f"{DEBUG_TAG} ERRO ao consultar banco: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     url_planilha = request.url_planilha or config.get("configuracoes_gerais", {}).get("url_planilha")
     if not url_planilha:
-        print(f"{DEBUG_TAG} ERRO: nenhuma url_planilha fornecida nem salva no config.")
+        print(f"{DEBUG_TAG} ERRO: nenhuma url_planilha fornecida nem salva no banco.")
         raise HTTPException(
             status_code=400,
-            detail="Nenhuma url_planilha foi fornecida e não há uma salva no config_pacientes.json."
+            detail="Nenhuma url_planilha foi fornecida e não há uma salva no banco."
         )
 
     print(f"{DEBUG_TAG} Usando url_planilha={url_planilha}")
@@ -249,14 +239,14 @@ def gerar_escala(request: GerarEscalaRequest):
 
 @app.get("/pacientes")
 def listar_pacientes():
-    """Lista todos os assistidos cadastrados no config_pacientes.json."""
+    """Lista todos os assistidos cadastrados no banco."""
     print(f"{DEBUG_TAG} Rota GET /pacientes chamada.")
     try:
-        config = carregar_config_pacientes()
-    except FileNotFoundError as e:
+        pacientes = database.listar_pacientes_dict()
+    except database.ErroBancoDados as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"pacientes": config.get("pacientes", {})}
+    return {"pacientes": pacientes}
 
 
 @app.get("/pacientes/{nome}")
@@ -266,37 +256,33 @@ def buscar_paciente(nome: str):
     print(f"{DEBUG_TAG} Rota GET /pacientes/{{nome}} chamada. nome={nome_normalizado}")
 
     try:
-        config = carregar_config_pacientes()
-    except FileNotFoundError as e:
+        config_paciente = database.buscar_paciente_db(nome_normalizado)
+    except database.ErroBancoDados as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    pacientes = config.get("pacientes", {})
-    if nome_normalizado not in pacientes:
+    if config_paciente is None:
         print(f"{DEBUG_TAG} Paciente '{nome_normalizado}' não encontrado.")
         raise HTTPException(status_code=404, detail=f"Assistido '{nome_normalizado}' não encontrado.")
 
-    return {"nome": nome_normalizado, "config": pacientes[nome_normalizado]}
+    return {"nome": nome_normalizado, "config": config_paciente}
 
 
 @app.post("/pacientes")
 def cadastrar_ou_editar_paciente(request: PacienteUpsertRequest):
     """
     Cadastra um assistido novo ou atualiza um existente (upsert).
-    Se o nome já existir no config_pacientes.json, sobrescreve a configuração dele.
-    Se não existir, cria um registro novo.
+    Se o nome já existir no banco, sobrescreve a configuração dele.
+    Se não existir, cria um registro novo. Só mexe nessa linha — não
+    afeta os demais assistidos.
     """
     nome_normalizado = request.nome.strip().upper()
     print(f"{DEBUG_TAG} Rota POST /pacientes chamada. nome={nome_normalizado}")
 
     try:
-        config = carregar_config_pacientes()
-    except FileNotFoundError as e:
+        ja_existia = database.buscar_paciente_db(nome_normalizado) is not None
+        database.upsert_paciente_db(nome_normalizado, request.config.model_dump())
+    except database.ErroBancoDados as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-    ja_existia = nome_normalizado in config.get("pacientes", {})
-
-    config.setdefault("pacientes", {})[nome_normalizado] = request.config.model_dump()
-    salvar_config_pacientes(config)
 
     acao = "atualizado" if ja_existia else "cadastrado"
     print(f"{DEBUG_TAG} Paciente '{nome_normalizado}' {acao} com sucesso.")
@@ -311,22 +297,19 @@ def cadastrar_ou_editar_paciente(request: PacienteUpsertRequest):
 
 @app.delete("/pacientes/{nome}")
 def remover_paciente(nome: str):
-    """Remove um assistido do config_pacientes.json (ex: saída do caseload)."""
+    """Remove um assistido do banco (ex: saída do caseload)."""
     nome_normalizado = nome.strip().upper()
     print(f"{DEBUG_TAG} Rota DELETE /pacientes/{{nome}} chamada. nome={nome_normalizado}")
 
     try:
-        config = carregar_config_pacientes()
-    except FileNotFoundError as e:
+        existia = database.remover_paciente_db(nome_normalizado)
+    except database.ErroBancoDados as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    pacientes = config.get("pacientes", {})
-    if nome_normalizado not in pacientes:
+    if not existia:
         print(f"{DEBUG_TAG} Paciente '{nome_normalizado}' não encontrado para remoção.")
         raise HTTPException(status_code=404, detail=f"Assistido '{nome_normalizado}' não encontrado.")
 
-    del pacientes[nome_normalizado]
-    salvar_config_pacientes(config)
     print(f"{DEBUG_TAG} Paciente '{nome_normalizado}' removido com sucesso.")
 
     return {"mensagem": f"Assistido '{nome_normalizado}' removido com sucesso."}
