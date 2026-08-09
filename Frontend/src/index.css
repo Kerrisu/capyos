@@ -1,0 +1,5 @@
+/* Reset mínimo. O tema visual de verdade fica em src/styles/theme.css */
+html, body {
+  margin: 0;
+  padding: 0;
+}

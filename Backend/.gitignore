@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+credenciais.json
+.env
+server.log
+config_pacientes.json

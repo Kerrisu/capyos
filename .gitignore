@@ -1,0 +1,40 @@
+# === CapyOS .gitignore ===
+# Protege dados sensíveis (credenciais, dados reais de pacientes) e lixo de build.
+# NUNCA remova as linhas de credenciais.json e config_pacientes.json abaixo.
+
+# --- Dados sensíveis: NUNCA subir pro Git ---
+credenciais.json
+**/credenciais.json
+config_pacientes.json
+**/config_pacientes.json
+.env
+**/.env
+.env.local
+**/.env.local
+
+# --- Python / FastAPI (Backend) ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# --- Node / React / Vite (Frontend) ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# --- Editores / SO ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# --- Zips temporários de entrega (Claude) ---
+*_temp/
