@@ -133,7 +133,16 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
             aba = planilha.get_worksheet(0)
             print(f"{DEBUG_TAG} Aba '{nome_aba}' NÃO encontrada, usando a primeira aba disponível: '{aba.title}'")
 
-        fmt = aba.spreadsheet.fetch_sheet_metadata({"includeGridData": True})
+        # IMPORTANTE: restringimos a busca só à aba desejada (ranges) e só
+        # aos campos que realmente usamos (fields). Sem isso, o Google
+        # Sheets devolve a formatação completa de TODAS as abas da
+        # planilha inteira, o que estoura a memória do servidor (Render
+        # free tem só 512MB) em planilhas grandes.
+        fmt = aba.spreadsheet.fetch_sheet_metadata({
+            "ranges": [aba.title],
+            "includeGridData": True,
+            "fields": "sheets.properties.title,sheets.data.rowData.values.formattedValue,sheets.data.rowData.values.effectiveFormat.backgroundColor",
+        })
         sheet_data = [s for s in fmt['sheets'] if s['properties']['title'] == aba.title][0]
         rows_data = sheet_data['data'][0].get('rowData', [])
         print(f"{DEBUG_TAG} {len(rows_data)} linhas baixadas da planilha.")
@@ -246,7 +255,13 @@ def inspecionar_cores(url_planilha, nome_aba):
             aba = planilha.get_worksheet(0)
             print(f"{DEBUG_TAG} Aba '{nome_aba}' não encontrada, usando a primeira: '{aba.title}'")
 
-        fmt = aba.spreadsheet.fetch_sheet_metadata({"includeGridData": True})
+        # Mesma restrição de processar_escala: só a aba certa, só os campos
+        # usados, pra não estourar a memória do servidor.
+        fmt = aba.spreadsheet.fetch_sheet_metadata({
+            "ranges": [aba.title],
+            "includeGridData": True,
+            "fields": "sheets.properties.title,sheets.data.rowData.values.formattedValue,sheets.data.rowData.values.effectiveFormat.backgroundColor",
+        })
         sheet_data = [s for s in fmt['sheets'] if s['properties']['title'] == aba.title][0]
         rows_data = sheet_data['data'][0].get('rowData', [])
 
