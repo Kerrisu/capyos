@@ -19,6 +19,20 @@ export function gerarEscala({ nomeAba, urlPlanilha }) {
   });
 }
 
+// Reformata um mapa de salas (ex: já editado manualmente na tela de
+// alocação de pacientes sem sala) em texto pronto pra WhatsApp. Usa a
+// mesma função de formatação do backend, pra nunca ter a lógica de
+// formatação duplicada em dois lugares (Python + JS) que possam divergir.
+export function formatarEscala({ mapa, naoAlocados }) {
+  return apiFetch("/formatar-escala", {
+    method: "POST",
+    body: JSON.stringify({
+      mapa,
+      nao_alocados: naoAlocados,
+    }),
+  });
+}
+
 export function listarPacientes() {
   return apiFetch("/pacientes");
 }
