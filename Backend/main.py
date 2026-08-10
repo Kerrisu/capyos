@@ -3,10 +3,14 @@ CapyOS Backend
 Etapa 1: Esqueleto do FastAPI (rota /health) - CONCLUÍDA E TESTADA
 Etapa 2: Conexão com Google Sheets + rota /abas
 Etapa 6.2: Migrado de config_pacientes.json (arquivo local) para Postgres (Neon)
+Parte 2 (QoL): rota /formatar-escala - suporte à alocação manual de
+pacientes sem sala no frontend.
 """
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Dict, List
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -233,6 +237,42 @@ def gerar_escala(request: GerarEscalaRequest):
         texto_formatado=texto_formatado,
         total_pacientes_processados=len(resultado)
     )
+
+
+# --- FORMATAÇÃO DE UM MAPA JÁ RESOLVIDO (ex: depois de alocação manual) ---
+
+class FormatarEscalaRequest(BaseModel):
+    """
+    mapa: mesmo formato de GerarEscalaResponse.mapa (sala -> horario -> nome).
+    nao_alocados: lista de strings "HH:MM - NOME" que continuam sem sala
+    (ex: pacientes que o coordenador escolheu "Pular" na alocação manual).
+    """
+    mapa: Dict[str, Dict[str, str]]
+    nao_alocados: List[str]
+
+
+class FormatarEscalaResponse(BaseModel):
+    texto_formatado: str
+
+
+@app.post("/formatar-escala", response_model=FormatarEscalaResponse)
+def formatar_escala(request: FormatarEscalaRequest):
+    """
+    Recebe um mapa de salas (por exemplo, já editado manualmente no
+    frontend depois da tela de alocação de pacientes sem sala) e devolve
+    o texto pronto pra WhatsApp.
+
+    IMPORTANTE: reaproveita a MESMA função `formatar_mapa_para_texto` usada
+    em /gerar-escala, em vez de ter uma segunda implementação em
+    JavaScript no frontend — evita o tipo de divergência de lógica que já
+    causou o bug do horário de 17:00H (duas normalizações ligeiramente
+    diferentes que um dia saíram de sincronia uma da outra).
+    """
+    print(f"{DEBUG_TAG} Rota /formatar-escala chamada. {len(request.nao_alocados)} pacientes sem sala.")
+
+    texto_formatado = logica_escala.formatar_mapa_para_texto(request.mapa, request.nao_alocados)
+
+    return FormatarEscalaResponse(texto_formatado=texto_formatado)
 
 
 # --- ROTAS DE GERENCIAMENTO DE PACIENTES ---
