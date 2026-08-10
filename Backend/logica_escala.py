@@ -338,23 +338,75 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     pacientes_db = configuracoes.get("pacientes", {})
     regras_gerais = configuracoes.get("configuracoes_gerais", {})
 
+    # CORRIGIDO (Parte 2, item 3 - padronização de nomes): a lista antiga
+    # tinha "CHRISTIAN RAFAEL" (com H) e "LUCAS EMANUEL" (um M) — nenhum dos
+    # dois bate com a grafia real usada na planilha nem no banco
+    # (CRISTIAN RAFAEL sem H, LUCAS EMMANUEL com dois M). Como a comparação
+    # é feita depois de já ter passado pelo dicionário `apelidos` abaixo,
+    # essa lista precisa usar sempre a grafia CANÔNICA (a do banco).
     super_grupo = [
-        "LUCCA CAVALCANTI", "LUCAS EMANUEL", "JONATHAN BEZERRA", "CHRISTIAN RAFAEL",
+        "LUCCA CAVALCANTI", "LUCAS EMMANUEL", "JONATHAN BEZERRA", "CRISTIAN RAFAEL",
         "LUCCA GREGO", "CALEB SANTOS", "YCARO AZEVEDO",
         "YURI AZEVEDO", "MURILO GONÇALVES", "DAVI HEITOR", "LUCAS BENTO", "JOSE MARCOS",
         "BERNARDO RIBEIRO", "WILLIAM ALVES"
     ]
 
+    # ATUALIZADO (Parte 2, item 3 - padronização de nomes entre planilha e
+    # banco). Cada chave é uma variante encontrada na planilha real
+    # (Agenda dos Aplicadores / DIRECIONAMENTO) que difere do nome
+    # cadastrado no banco (Neon) — seja por letra faltando/trocada, seja
+    # por diferença de acentuação. O valor é SEMPRE a grafia exata que
+    # está (ou deveria estar) cadastrada em `pacientes_db`.
+    #
+    # ⚠️ ATENÇÃO — dois nomes abaixo dependem de correção manual no banco:
+    # o registro de "JOÃO WILLAMS" precisa ser renomeado pra "JOÃO WILLIAMS"
+    # e o de "WILLIAN ALVES" precisa ser renomeado pra "WILLIAM ALVES" na
+    # tela Gerenciar Assistidos. Até isso ser feito, esses dois apelidos
+    # resolvem o nome certo mas não encontram a config no banco (sala
+    # fixa, divide_sala etc. ficam vazios pra eles).
     apelidos = {
         "MALU": "MARIA LUIZA",
+
         "LAVINIA F": "LAVINIA FIGUEIRAS",
         "LAVINIA FIGUEIRA": "LAVINIA FIGUEIRAS",
-        "LUCAS E": "LUCAS EMANUEL",
+        "LAVÍNIA FIGUEIRAS": "LAVINIA FIGUEIRAS",
+        "LAVÍNIA FIGUEIRA": "LAVINIA FIGUEIRAS",
+
+        "LUCAS E": "LUCAS EMMANUEL",
+        "LUCAS EMANUEL": "LUCAS EMMANUEL",
+
         "ANTONY V": "ANTHONY VINICIUS",
         "ANTHONY VINCIUS": "ANTHONY VINICIUS",
-        "PEDRO ACIOLLY": "PEDRO ACCIOLY",
+
+        "PEDRO ACIOLY": "PEDRO ACCIOLY",
+
+        # WILLIAM ALVES / JOÃO WILLIAMS: ver aviso acima sobre correção
+        # pendente no banco.
         "WILLIAM": "WILLIAM ALVES",
-        "WILLIAN": "WILLIAM ALVES"
+        "WILLIAN": "WILLIAM ALVES",
+        "WILLIAN ALVES": "WILLIAM ALVES",
+
+        "JOÃO WILLAMS": "JOÃO WILLIAMS",
+        "JOÃO WILLIANS": "JOÃO WILLIAMS",
+
+        "JOÃO MATEUS": "JOÃO MATHEUS",
+
+        "LUCCA CALVACANTI": "LUCCA CAVALCANTI",
+
+        "THEO VITOR": "THEO VICTOR",
+
+        "BEATRIZ ARAÚJO": "BEATRIZ ARAUJO",
+        "BEATRIZ ARÚJO": "BEATRIZ ARAUJO",
+
+        "LAURA ARAUJO": "LAURA ARAÚJO",
+
+        "LÍLIA MELO": "LILIA MELO",
+
+        "MARIA JULIA": "MARIA JÚLIA",
+
+        "MARIA VITORIA": "MARIA VITÓRIA",
+
+        "MELINA VITORIA": "MELINA VITÓRIA",
     }
 
     salas_terreo = regras_gerais.get("ordem_salas_terreo", [])
