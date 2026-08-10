@@ -8,7 +8,6 @@ import { getHealth } from "./api/capyos";
 import "./styles/theme.css";
 
 export default function App() {
-  const [feedback, setFeedback] = useState("Toca em um botão pra ver o efeito de clique");
   const [statusBackend, setStatusBackend] = useState("verificando"); // verificando | online | offline
   const [tela, setTela] = useState("home"); // home | gerar-escala | pacientes
 
@@ -60,25 +59,11 @@ export default function App() {
       {tela === "home" && (
         <div style={{ width: "100%", maxWidth: 420 }}>
           <MinecraftPanel title="Ações rápidas">
-            <div style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B", minHeight: 24, marginBottom: 8 }}>
-              {feedback}
-            </div>
-
-            <MinecraftButton
-              onClick={() => {
-                setFeedback("✅ Gerar Escala — pressionado!");
-                setTela("gerar-escala");
-              }}
-            >
+            <MinecraftButton onClick={() => setTela("gerar-escala")}>
               Gerar Escala
             </MinecraftButton>
 
-            <MinecraftButton
-              onClick={() => {
-                setFeedback("⭐ Gerenciar Assistidos — pressionado!");
-                setTela("pacientes");
-              }}
-            >
+            <MinecraftButton onClick={() => setTela("pacientes")}>
               Gerenciar Assistidos
             </MinecraftButton>
           </MinecraftPanel>
