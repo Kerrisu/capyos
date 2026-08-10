@@ -113,6 +113,26 @@ def _normalizar(texto):
     return "".join(c for c in nfkd if not unicodedata.combining(c)).upper().strip()
 
 
+def _normalizar_horario(texto):
+    """
+    Normaliza texto de horário pra comparação: maiúsculo, sem 'H' e sem
+    NENHUM espaço (início, fim ou meio).
+
+    IMPORTANTE (lição da Parte 2, item 4): existia uma bug de "17:00H"
+    sumindo silenciosamente nas sextas-feiras porque a planilha tinha
+    "17:00 H" (espaço extra antes do H) em vez de "17:00H". A comparação
+    antiga usava duas implementações de normalização diferentes — uma
+    com .strip() no fim (pra montar a lista de referência) e outra sem
+    (pra ler cada linha da planilha) — que podiam divergir exatamente
+    nesse tipo de caso. Agora existe UMA função só, usada nos dois
+    lugares, e ela remove QUALQUER espaço (não só nas pontas), pra
+    erros de digitação assim não quebrarem mais a leitura da escala.
+    """
+    if not texto:
+        return ""
+    return "".join(texto.upper().replace("H", "").split())
+
+
 def processar_escala(url_planilha, callback_progresso, nome_aba):
     """
     callback_progresso: função que recebe (valor_float, texto_status).
@@ -149,7 +169,7 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
 
         pacientes_encontrados = []
         registrados = set()
-        horarios_limpos = [h.replace("H", "").strip().upper() for h in HORARIOS_PADRAO]
+        horarios_limpos = [_normalizar_horario(h) for h in HORARIOS_PADRAO]
 
         # Mapa coluna -> nome do profissional daquele bloco. É atualizado toda
         # vez que encontramos uma linha "HORÁRIO" (a linha ANTERIOR a ela tem
@@ -190,7 +210,7 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
                 linha_anterior_values = values
                 continue
 
-            texto_coluna_a = texto_coluna_a_bruto.upper().replace("H", "")
+            texto_coluna_a = _normalizar_horario(texto_coluna_a_bruto)
 
             if texto_coluna_a not in horarios_limpos:
                 linha_anterior_values = values
@@ -265,7 +285,7 @@ def inspecionar_cores(url_planilha, nome_aba):
         sheet_data = [s for s in fmt['sheets'] if s['properties']['title'] == aba.title][0]
         rows_data = sheet_data['data'][0].get('rowData', [])
 
-        horarios_limpos = [h.replace("H", "").strip().upper() for h in HORARIOS_PADRAO]
+        horarios_limpos = [_normalizar_horario(h) for h in HORARIOS_PADRAO]
         amostras = []
 
         for row in rows_data:
@@ -273,7 +293,7 @@ def inspecionar_cores(url_planilha, nome_aba):
             if not values:
                 continue
 
-            texto_coluna_a = values[0].get('formattedValue', '').strip().upper().replace("H", "")
+            texto_coluna_a = _normalizar_horario(values[0].get('formattedValue', ''))
             if texto_coluna_a not in horarios_limpos:
                 continue
 
