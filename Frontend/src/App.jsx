@@ -81,10 +81,6 @@ export default function App() {
             >
               Gerenciar Assistidos
             </MinecraftButton>
-
-            <MinecraftButton onClick={() => setFeedback("⚙️ Configurações — pressionado!")}>
-              Configurações
-            </MinecraftButton>
           </MinecraftPanel>
         </div>
       )}
