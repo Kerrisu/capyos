@@ -1,20 +1,57 @@
 import { useState, useEffect } from "react";
 import MinecraftButton from "./MinecraftButton";
 import MinecraftPanel from "./MinecraftPanel";
-import { getAbas, gerarEscala } from "../api/capyos";
+import { getAbas, gerarEscala, formatarEscala } from "../api/capyos";
 
-const DEBUG_TAG = "🔧[CAPYOS-FRONTEND-DEBUG]";
+const DEBUG_TAG = "ðŸ”§[CAPYOS-FRONTEND-DEBUG]";
 
-// Estados possíveis da tela:
-// carregando-abas -> pronto -> gerando -> resultado
-//                       |
-//                       -> erro (falha ao buscar abas OU ao gerar escala)
+// Estados possÃ­veis da tela:
+// carregando-abas -> pronto -> gerando -> resolvendo-conflitos -> formatando -> resultado
+//                       |                        (sÃ³ entra aqui se
+//                       -> erro                   sobrar gente sem sala)
+const HORARIOS = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"];
+
+// Faz uma cÃ³pia profunda do mapa de salas, pra poder mexer sem alterar o
+// resultado original vindo da API (Ãºtil pra permitir "recomeÃ§ar" se algo
+// der errado no meio da alocaÃ§Ã£o manual).
+function clonarMapa(mapa) {
+  return JSON.parse(JSON.stringify(mapa));
+}
+
+// O backend manda cada pendÃªncia como uma string "HH:MM - NOME".
+// Essa funÃ§Ã£o separa os dois pedaÃ§os de volta.
+function parsePendencia(item) {
+  const idx = item.indexOf(" - ");
+  if (idx === -1) {
+    return { horario: "??:??", nome: item };
+  }
+  return { horario: item.slice(0, idx).trim(), nome: item.slice(idx + 3).trim() };
+}
+
+function ordenarSalas(mapa) {
+  return Object.keys(mapa).sort((a, b) => {
+    const na = parseInt(a.split(" ")[1], 10);
+    const nb = parseInt(b.split(" ")[1], 10);
+    return (isNaN(na) ? 99 : na) - (isNaN(nb) ? 99 : nb);
+  });
+}
+
 export default function TelaGerarEscala({ onVoltar }) {
   const [estado, setEstado] = useState("carregando-abas");
   const [abas, setAbas] = useState([]);
   const [abaSelecionada, setAbaSelecionada] = useState("");
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState("");
+
+  // --- Estado da fase de alocaÃ§Ã£o manual (Parte 2 QoL) ---
+  const [mapaAtual, setMapaAtual] = useState(null);
+  const [naoAlocadosFinal, setNaoAlocadosFinal] = useState([]);
+  const [filaRestante, setFilaRestante] = useState([]);
+
+  // --- Texto final (pode vir direto do /gerar-escala, ou recalculado
+  // depois da alocaÃ§Ã£o manual via /formatar-escala) ---
+  const [textoFinal, setTextoFinal] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     console.log(`${DEBUG_TAG} TelaGerarEscala montada. Buscando abas...`);
@@ -32,6 +69,29 @@ export default function TelaGerarEscala({ onVoltar }) {
       });
   }, []);
 
+  // Quando a fila de pendÃªncias zera (todo mundo foi alocado ou pulado),
+  // manda o mapa final pro backend formatar o texto e vai pra tela de
+  // resultado.
+  useEffect(() => {
+    if (estado !== "resolvendo-conflitos" || !mapaAtual) return;
+    if (filaRestante.length > 0) return;
+
+    console.log(`${DEBUG_TAG} Fila de alocaÃ§Ã£o manual zerada. Formatando texto final...`);
+    setEstado("formatando");
+
+    formatarEscala({ mapa: mapaAtual, naoAlocados: naoAlocadosFinal })
+      .then((data) => {
+        setTextoFinal(data.texto_formatado);
+        setEstado("resultado");
+      })
+      .catch((e) => {
+        console.error(`${DEBUG_TAG} Erro ao formatar escala final:`, e);
+        setErro(e.message);
+        setEstado("erro");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filaRestante, estado, mapaAtual]);
+
   function handleGerar() {
     if (!abaSelecionada) return;
     console.log(`${DEBUG_TAG} Gerando escala para aba: ${abaSelecionada}`);
@@ -42,7 +102,19 @@ export default function TelaGerarEscala({ onVoltar }) {
       .then((data) => {
         console.log(`${DEBUG_TAG} Escala gerada. Total processados: ${data.total_pacientes_processados}`);
         setResultado(data);
-        setEstado("resultado");
+
+        if (data.nao_alocados && data.nao_alocados.length > 0) {
+          // Tem gente sem sala: entra na fase de alocaÃ§Ã£o manual antes
+          // de mostrar o resultado final.
+          console.log(`${DEBUG_TAG} ${data.nao_alocados.length} paciente(s) sem sala. Iniciando alocaÃ§Ã£o manual...`);
+          setMapaAtual(clonarMapa(data.mapa));
+          setNaoAlocadosFinal([...data.nao_alocados]);
+          setFilaRestante([...data.nao_alocados]);
+          setEstado("resolvendo-conflitos");
+        } else {
+          setTextoFinal(data.texto_formatado);
+          setEstado("resultado");
+        }
       })
       .catch((e) => {
         console.error(`${DEBUG_TAG} Erro ao gerar escala:`, e);
@@ -53,7 +125,41 @@ export default function TelaGerarEscala({ onVoltar }) {
 
   function handleGerarOutraAba() {
     setResultado(null);
+    setMapaAtual(null);
+    setNaoAlocadosFinal([]);
+    setFilaRestante([]);
+    setTextoFinal("");
+    setCopiado(false);
     setEstado("pronto");
+  }
+
+  function handleEscolherSala(sala, horario, nome, itemOriginal) {
+    console.log(`${DEBUG_TAG} Alocando manualmente: ${nome} (${horario}) -> ${sala}`);
+    setMapaAtual((prev) => {
+      const novo = clonarMapa(prev);
+      const atual = novo[sala][horario];
+      novo[sala][horario] = atual ? `${atual} / ${nome}` : nome;
+      return novo;
+    });
+    setNaoAlocadosFinal((prev) => prev.filter((x) => x !== itemOriginal));
+    setFilaRestante((prev) => prev.slice(1));
+  }
+
+  function handlePular(itemOriginal) {
+    console.log(`${DEBUG_TAG} Pulando / deixando sem sala: ${itemOriginal}`);
+    // Continua em naoAlocadosFinal (jÃ¡ estÃ¡ lÃ¡ desde o inÃ­cio) â€” sÃ³ avanÃ§a a fila.
+    setFilaRestante((prev) => prev.slice(1));
+  }
+
+  async function handleCopiar() {
+    try {
+      await navigator.clipboard.writeText(textoFinal);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch (e) {
+      console.error(`${DEBUG_TAG} Erro ao copiar pra Ã¡rea de transferÃªncia:`, e);
+      setErro("NÃ£o consegui copiar automaticamente. Selecione o texto manualmente.");
+    }
   }
 
   return (
@@ -61,14 +167,14 @@ export default function TelaGerarEscala({ onVoltar }) {
       <MinecraftPanel title="Gerar Escala">
         {estado === "carregando-abas" && (
           <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>
-            🟡 Carregando abas da planilha...
+            ðŸŸ¡ Carregando abas da planilha...
           </p>
         )}
 
         {estado === "erro" && (
           <>
             <p style={{ fontSize: 16, color: "#8B0000", textAlign: "center", marginBottom: 12 }}>
-              🔴 {erro}
+              ðŸ”´ {erro}
             </p>
             <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
           </>
@@ -115,13 +221,101 @@ export default function TelaGerarEscala({ onVoltar }) {
           </>
         )}
 
+        {estado === "resolvendo-conflitos" && filaRestante.length > 0 && (() => {
+          const itemAtual = filaRestante[0];
+          const { horario, nome } = parsePendencia(itemAtual);
+          const filaDetalhada = filaRestante
+            .map((item) => {
+              const p = parsePendencia(item);
+              return `${p.nome} (${p.horario})`;
+            })
+            .join("  |  ");
+
+          return (
+            <>
+              <div
+                style={{
+                  background: "#2b2b2b",
+                  padding: 10,
+                  marginBottom: 10,
+                  border: "2px solid #373737",
+                }}
+              >
+                <p style={{ fontSize: 12, color: "#aaaaaa", textAlign: "center", marginBottom: 6 }}>
+                  PRÃ“XIMOS DA FILA:
+                </p>
+                <p style={{ fontSize: 14, color: "#2ecc71", textAlign: "center" }}>
+                  {filaDetalhada}
+                </p>
+              </div>
+
+              <p
+                style={{
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  color: "#2ecc71",
+                  textAlign: "center",
+                  marginBottom: 10,
+                }}
+              >
+                ALOCANDO AGORA: {nome} ({horario})
+              </p>
+
+              <div
+                style={{
+                  maxHeight: 260,
+                  overflowY: "auto",
+                  marginBottom: 10,
+                  border: "2px solid #373737",
+                  padding: 6,
+                  background: "#1f1f1f",
+                }}
+              >
+                {ordenarSalas(mapaAtual).map((sala) => {
+                  const ocupantes = mapaAtual[sala][horario] || "";
+                  const qtd = ocupantes ? ocupantes.split(" / ").length : 0;
+
+                  // Igual ao app antigo: sala com 3 ou mais pessoas nÃ£o
+                  // aparece como opÃ§Ã£o pra evitar amontoar demais.
+                  if (qtd >= 3) return null;
+
+                  const label = qtd === 0 ? `${sala} | (Vazia)` : `${sala} | Com: ${ocupantes}`;
+
+                  return (
+                    <div key={sala} style={{ marginBottom: 6 }}>
+                      <MinecraftButton
+                        onClick={() => handleEscolherSala(sala, horario, nome, itemAtual)}
+                      >
+                        {label}
+                      </MinecraftButton>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <MinecraftButton
+                onClick={() => handlePular(itemAtual)}
+                style={{ background: "#c0392b" }}
+              >
+                Pular / Deixar sem sala
+              </MinecraftButton>
+            </>
+          );
+        })()}
+
+        {estado === "formatando" && (
+          <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>
+            ðŸŸ¡ Organizando escala final...
+          </p>
+        )}
+
         {estado === "resultado" && resultado && (
           <>
             <p style={{ fontSize: 16, color: "#2B2B2B", marginBottom: 4 }}>
-              ✅ {resultado.total_pacientes_processados} assistidos processados
+              âœ… {resultado.total_pacientes_processados} assistidos processados
             </p>
 
-            {resultado.nao_alocados?.length > 0 && (
+            {naoAlocadosFinal.length > 0 && (
               <div
                 style={{
                   background: "#FFD4D4",
@@ -132,9 +326,9 @@ export default function TelaGerarEscala({ onVoltar }) {
                   color: "#2B2B2B",
                 }}
               >
-                ⚠️ {resultado.nao_alocados.length} sem sala alocada:
+                âš ï¸ {naoAlocadosFinal.length} sem sala alocada:
                 <br />
-                {resultado.nao_alocados.join(", ")}
+                {naoAlocadosFinal.join(", ")}
               </div>
             )}
 
@@ -152,11 +346,14 @@ export default function TelaGerarEscala({ onVoltar }) {
                 border: "2px solid #373737",
               }}
             >
-              {resultado.texto_formatado}
+              {textoFinal}
             </div>
 
-            <MinecraftButton onClick={handleGerarOutraAba}>Gerar outra aba</MinecraftButton>
-            <MinecraftButton onClick={onVoltar}>Voltar ao início</MinecraftButton>
+            <MinecraftButton onClick={handleCopiar}>
+              {copiado ? "âœ… VacÃ¢ncia copiada!" : "Copiar VacÃ¢ncia"}
+            </MinecraftButton>
+
+            <MinecraftButton onClick={onVoltar}>Voltar ao inÃ­cio</MinecraftButton>
           </>
         )}
       </MinecraftPanel>
