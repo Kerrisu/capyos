@@ -451,15 +451,21 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
 
         # --- REGRA DO JORGE: assistidos dele vão sempre pra ABA 04, ---
         # --- ignorando bloqueio de sala e qualquer outra regra. ------
+        # CORRIGIDO (Parte 2, item 3): usa `nome` (já corrigido pelo
+        # apelidos) em vez de `nome_original` ao ESCREVER no mapa final.
+        # Antes, o dicionário `apelidos` só corrigia a busca interna no
+        # banco — o texto final que ia pro WhatsApp continuava mostrando
+        # o erro de digitação (ex: "LUCCA CALVACANTI" em vez de "LUCCA
+        # CAVALCANTI"), como confirmado num teste real em produção.
         if p.get("profissional") and _normalizar(p["profissional"]) == "JORGE":
             conteudo_atual_aba04 = mapa_final["ABA 04"][horario]
             if not conteudo_atual_aba04:
-                mapa_final["ABA 04"][horario] = nome_original
+                mapa_final["ABA 04"][horario] = nome
             else:
-                ja_tem = nome_original in conteudo_atual_aba04
+                ja_tem = nome in conteudo_atual_aba04
                 if not ja_tem:
                     qtd_atual = len(conteudo_atual_aba04.split(" / "))
-                    mapa_final["ABA 04"][horario] = f"{conteudo_atual_aba04} / {nome_original}"
+                    mapa_final["ABA 04"][horario] = f"{conteudo_atual_aba04} / {nome}"
                     if qtd_atual + 1 > 2:
                         print(f"{DEBUG_TAG} AVISO: mais de 2 assistidos do Jorge na ABA 04 às {horario} — confira se está correto: {mapa_final['ABA 04'][horario]}")
             sala_destinada = "ABA 04"
@@ -468,9 +474,9 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
 
         sf = info.get("sala_fixa")
         if sf and sf in mapa_final and sf not in bloqueadas:
-            if not mapa_final[sf][horario] or nome_original in mapa_final[sf][horario]:
+            if not mapa_final[sf][horario] or nome in mapa_final[sf][horario]:
                 sala_destinada = sf
-                mapa_final[sf][horario] = nome_original
+                mapa_final[sf][horario] = nome
 
         if not sala_destinada:
             for sala in salas_ativas:
@@ -480,7 +486,7 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
                     if info.get("resistencia_escada") and sala not in salas_terreo:
                         continue
                     sala_destinada = sala
-                    mapa_final[sala][horario] = nome_original
+                    mapa_final[sala][horario] = nome
                     break
                 else:
                     dono_nome_bruto = conteudo_atual.split(" / ")[0].strip()
@@ -492,7 +498,7 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
                     if pode_entrar and len(conteudo_atual.split(" / ")) < 2:
                         mesmo_grupo = info.get("grupo_match") == info_dono.get("grupo_match") and info.get("grupo_match") is not None
                         if mesmo_grupo or nome in super_grupo:
-                            mapa_final[sala][horario] = f"{conteudo_atual} / {nome_original}"
+                            mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
                             sala_destinada = sala
                             break
 
@@ -506,16 +512,16 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
 
                     if not info_dono.get("sala_fixa") and info_dono.get("divide_sala", True):
                         if len(conteudo_atual.split(" / ")) < 3:
-                            mapa_final[sala][horario] = f"{conteudo_atual} / {nome_original}"
+                            mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
                             sala_destinada = sala
                             break
 
         if sala_destinada:
             if " / " not in mapa_final[sala_destinada][horario]:
-                mapa_final[sala_destinada][horario] = nome_original
+                mapa_final[sala_destinada][horario] = nome
             pacientes_alocados_no_horario[horario].add(nome)
         else:
-            nao_alocados.append(f"{horario} - {nome_original}")
+            nao_alocados.append(f"{horario} - {nome}")
 
     print(f"{DEBUG_TAG} distribuir_salas_ia() concluída. {len(nao_alocados)} pacientes sem sala.")
     return mapa_final, nao_alocados
