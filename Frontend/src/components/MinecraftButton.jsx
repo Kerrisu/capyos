@@ -1,7 +1,27 @@
-export default function MinecraftButton({ children, onClick, disabled, type = "button" }) {
-  const cls = disabled ? "mc-button mc-button--disabled" : "mc-button";
+export default function MinecraftButton({
+  children,
+  onClick,
+  disabled,
+  type = "button",
+  className = "",
+  style,
+}) {
+  const cls = [
+    "mc-button",
+    disabled ? "mc-button--disabled" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <button type={type} className={cls} onClick={disabled ? undefined : onClick} disabled={disabled}>
+    <button
+      type={type}
+      className={cls}
+      style={style}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );
