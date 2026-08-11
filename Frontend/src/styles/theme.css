@@ -144,6 +144,37 @@ body {
   color: var(--mc-nome-3);
 }
 
+/* Fila de pendências agrupada por horário (tela de alocação manual). */
+.fila-grupo {
+  margin-bottom: 10px;
+}
+.fila-grupo:last-child {
+  margin-bottom: 0;
+}
+.fila-horario-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #0B3D20;
+  background: #2ecc71;
+  padding: 4px 8px;
+  display: inline-block;
+}
+.fila-contagem {
+  font-size: 12px;
+  color: #9a9a9a;
+  margin-left: 8px;
+}
+.fila-nomes {
+  border-left: 2px solid #444444;
+  padding-left: 10px;
+  margin-top: 4px;
+}
+.fila-nome {
+  font-size: 14px;
+  color: #e6e6e6;
+  margin: 2px 0;
+}
+
 /* Texto "ALOCANDO AGORA: fulano (horário)" — contorno escuro pra garantir
    contraste do verde claro contra o painel claro. */
 .alocando-agora {
