@@ -15,6 +15,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
+import re
 import unicodedata
 
 # --- CONFIGURAÇÕES ---
@@ -133,6 +134,31 @@ def _normalizar_horario(texto):
     return "".join(texto.upper().replace("H", "").split())
 
 
+def _remover_sufixo_parenteses(texto):
+    """
+    Remove qualquer sufixo entre parênteses do nome de um assistido
+    (ex: "FELIPE SALEMI (SUPRIR AT)" -> "FELIPE SALEMI", "MELINA VITORIA
+    (SUPRIR DAYSI PP)" -> "MELINA VITORIA").
+
+    IMPORTANTE (bug encontrado na Parte 2): sem isso, o nome com
+    parêntese não batia com nada — nem com o cadastro em `pacientes_db`,
+    nem com os dicionários `apelidos`/`super_grupo` em
+    `distribuir_salas_ia` — porque todos eles comparam a string exata do
+    nome. Resultado: o assistido perdia silenciosamente sala fixa,
+    prioridade clínica e posição no super grupo, sem nenhum erro visível.
+    Aplicado aqui, o mais cedo possível na leitura da célula, pra ser a
+    única fonte de verdade — tudo que vem depois (banco, apelidos,
+    super_grupo, texto final) já trabalha só com o nome limpo.
+
+    Por enquanto o conteúdo dentro do parêntese (ex: "SUPRIR AT") não é
+    guardado em lugar nenhum — só é descartado.
+    """
+    if not texto:
+        return texto
+    sem_parenteses = re.sub(r"\([^)]*\)", "", texto)
+    return " ".join(sem_parenteses.split())
+
+
 def processar_escala(url_planilha, callback_progresso, nome_aba):
     """
     callback_progresso: função que recebe (valor_float, texto_status).
@@ -224,6 +250,14 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
                 if not valor:
                     continue
 
+                # Remove sufixo entre parênteses (ex: "(SUPRIR AT)") ANTES de
+                # qualquer normalização ou registro — precisa ser a primeira
+                # coisa feita com o texto bruto da célula. Ver docstring de
+                # _remover_sufixo_parenteses() pro contexto do bug.
+                valor = _remover_sufixo_parenteses(valor)
+                if not valor:
+                    continue
+
                 nome_limpo = " ".join(valor.upper().split())
                 chave_unica = (nome_limpo, texto_coluna_a)
 
@@ -301,6 +335,13 @@ def inspecionar_cores(url_planilha, nome_aba):
                 if j == 0:
                     continue
                 valor = cell.get('formattedValue', '').strip()
+                if not valor:
+                    continue
+
+                # Mesmo tratamento de processar_escala, pra o diagnóstico de
+                # cores refletir o nome real usado no processamento (uma
+                # fonte de verdade só).
+                valor = _remover_sufixo_parenteses(valor)
                 if not valor:
                     continue
 
