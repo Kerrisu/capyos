@@ -1,6 +1,5 @@
 /* CapyOS - Tema visual global (Minecraft-inspired) */
 /* As fontes (Press Start 2P, VT323) são carregadas via <link> no index.html */
-
 :root {
   --mc-panel: #C6C6C6;
   --mc-panel-light: #FFFFFF;
@@ -11,12 +10,20 @@
   --mc-button-bg: #A0A0A0;
   --mc-button-light: #D4D4D4;
   --mc-button-dark: #5C5C5C;
-}
+  --mc-button-hover: #B8B8B8;
 
+  --mc-danger-bg: #C0392B;
+  --mc-danger-light: #E74C3C;
+  --mc-danger-dark: #7B241C;
+  --mc-danger-hover: #D2493A;
+
+  --mc-nome-1: #1B5E20;   /* verde escuro */
+  --mc-nome-2: #7D6608;   /* amarelo escuro (mostarda) */
+  --mc-nome-3: #7B241C;   /* vermelho escuro */
+}
 * {
   box-sizing: border-box;
 }
-
 body {
   margin: 0;
   font-family: 'VT323', monospace;
@@ -29,11 +36,9 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
-
 #root {
   min-height: 100vh;
 }
-
 /* Título / cabeçalhos no estilo pixelado */
 .mc-title {
   font-family: 'Press Start 2P', monospace;
@@ -41,7 +46,6 @@ body {
   text-shadow: 3px 3px 0 var(--mc-panel-dark);
   letter-spacing: 1px;
 }
-
 /* Painel estilo inventário */
 .mc-panel {
   background: var(--mc-panel);
@@ -52,14 +56,12 @@ body {
   padding: 20px;
   box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.25);
 }
-
 .mc-panel h2 {
   font-family: 'Press Start 2P', monospace;
   font-size: 13px;
   margin: 0 0 16px 0;
   color: var(--mc-text-dark);
 }
-
 /* Botão de bloco (assinatura visual, aprovada pelo Ken) */
 .mc-button {
   font-family: 'Press Start 2P', monospace;
@@ -72,14 +74,19 @@ body {
   width: 100%;
   margin-bottom: 10px;
   text-align: center;
-  transition: transform 0.05s ease;
+  transition: transform 0.05s ease, background 0.1s ease;
   background: var(--mc-button-bg);
   border-top: 4px solid var(--mc-button-light);
   border-left: 4px solid var(--mc-button-light);
   border-bottom: 4px solid var(--mc-button-dark);
   border-right: 4px solid var(--mc-button-dark);
 }
-
+/* Efeito de hover — vale pra qualquer botão .mc-button, inclusive variantes,
+   desde que não esteja desabilitado. */
+.mc-button:hover:not(.mc-button--disabled) {
+  background: var(--mc-button-hover);
+  transform: translateY(-1px);
+}
 .mc-button:active {
   transform: translateY(2px);
   border-top: 4px solid var(--mc-button-dark);
@@ -87,7 +94,6 @@ body {
   border-bottom: 4px solid var(--mc-button-light);
   border-right: 4px solid var(--mc-button-light);
 }
-
 .mc-button--disabled {
   background: #8A8A8A;
   border-top: 4px solid #ABABAB;
@@ -98,6 +104,63 @@ body {
   opacity: 0.65;
 }
 
+/* Variante de botão "perigo" — usada em ações destrutivas como
+   "Pular / Deixar sem sala". */
+.mc-button--danger {
+  background: var(--mc-danger-bg);
+  color: #FFF3F3;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+  border-top: 4px solid var(--mc-danger-light);
+  border-left: 4px solid var(--mc-danger-light);
+  border-bottom: 4px solid var(--mc-danger-dark);
+  border-right: 4px solid var(--mc-danger-dark);
+}
+.mc-button--danger:hover:not(.mc-button--disabled) {
+  background: var(--mc-danger-hover);
+}
+.mc-button--danger:active {
+  border-top: 4px solid var(--mc-danger-dark);
+  border-left: 4px solid var(--mc-danger-dark);
+  border-bottom: 4px solid var(--mc-danger-light);
+  border-right: 4px solid var(--mc-danger-light);
+}
+
+/* Variante usada nos botões de escolha de sala (tela de alocação manual):
+   fonte um pouco menor pra caber melhor os nomes dos ocupantes. */
+.mc-button--sala {
+  font-size: 10px;
+  padding: 11px 14px;
+}
+
+/* Cores de destaque pros nomes dos assistidos dentro dos botões de sala.
+   Tons escuros porque o fundo do botão é claro. */
+.sala-nome--0 {
+  color: var(--mc-nome-1);
+}
+.sala-nome--1 {
+  color: var(--mc-nome-2);
+}
+.sala-nome--2 {
+  color: var(--mc-nome-3);
+}
+
+/* Texto "ALOCANDO AGORA: fulano (horário)" — contorno escuro pra garantir
+   contraste do verde claro contra o painel claro. */
+.alocando-agora {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: #2ecc71;
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.5;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0    2px 0 #000;
+}
+
 /* Capivara (gif do Ken) */
 .capybara {
   width: 120px;
@@ -105,37 +168,37 @@ body {
   image-rendering: pixelated;
   animation: capybara-breathe 2.4s ease-in-out infinite;
 }
-
 @keyframes capybara-breathe {
   0%, 100% { transform: scale(1) translateY(0); }
   50% { transform: scale(1.02) translateY(-2px); }
 }
-
 /* Telas pequenas de celular (iPhone SE, Android compacto, etc.) */
 @media (max-width: 380px) {
   .mc-panel {
     padding: 14px;
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25);
   }
-
   .mc-panel h2 {
     font-size: 11px;
   }
-
   .mc-title {
     font-size: 18px !important;
   }
-
   .mc-button {
     font-size: 11px;
     padding: 12px 14px;
   }
-
+  .mc-button--sala {
+    font-size: 9px;
+    padding: 9px 12px;
+  }
+  .alocando-agora {
+    font-size: 11px;
+  }
   .capybara {
     width: 90px;
   }
 }
-
 /* Telas bem baixas (celular em modo paisagem) — evita cortar conteúdo */
 @media (max-height: 480px) and (orientation: landscape) {
   .capybara {
