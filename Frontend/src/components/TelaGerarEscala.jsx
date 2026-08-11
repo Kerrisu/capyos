@@ -3,23 +3,23 @@ import MinecraftButton from "./MinecraftButton";
 import MinecraftPanel from "./MinecraftPanel";
 import { getAbas, gerarEscala, formatarEscala } from "../api/capyos";
 
-const DEBUG_TAG = "ðŸ”§[CAPYOS-FRONTEND-DEBUG]";
+const DEBUG_TAG = "🔧[CAPYOS-FRONTEND-DEBUG]";
 
-// Estados possÃ­veis da tela:
+// Estados possíveis da tela:
 // carregando-abas -> pronto -> gerando -> resolvendo-conflitos -> formatando -> resultado
-//                       |                        (sÃ³ entra aqui se
+//                       |                        (só entra aqui se
 //                       -> erro                   sobrar gente sem sala)
 const HORARIOS = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"];
 
-// Faz uma cÃ³pia profunda do mapa de salas, pra poder mexer sem alterar o
-// resultado original vindo da API (Ãºtil pra permitir "recomeÃ§ar" se algo
-// der errado no meio da alocaÃ§Ã£o manual).
+// Faz uma cópia profunda do mapa de salas, pra poder mexer sem alterar o
+// resultado original vindo da API (útil pra permitir "recomeçar" se algo
+// der errado no meio da alocação manual).
 function clonarMapa(mapa) {
   return JSON.parse(JSON.stringify(mapa));
 }
 
-// O backend manda cada pendÃªncia como uma string "HH:MM - NOME".
-// Essa funÃ§Ã£o separa os dois pedaÃ§os de volta.
+// O backend manda cada pendência como uma string "HH:MM - NOME".
+// Essa função separa os dois pedaços de volta.
 function parsePendencia(item) {
   const idx = item.indexOf(" - ");
   if (idx === -1) {
@@ -43,13 +43,13 @@ export default function TelaGerarEscala({ onVoltar }) {
   const [resultado, setResultado] = useState(null);
   const [erro, setErro] = useState("");
 
-  // --- Estado da fase de alocaÃ§Ã£o manual (Parte 2 QoL) ---
+  // --- Estado da fase de alocação manual (Parte 2 QoL) ---
   const [mapaAtual, setMapaAtual] = useState(null);
   const [naoAlocadosFinal, setNaoAlocadosFinal] = useState([]);
   const [filaRestante, setFilaRestante] = useState([]);
 
   // --- Texto final (pode vir direto do /gerar-escala, ou recalculado
-  // depois da alocaÃ§Ã£o manual via /formatar-escala) ---
+  // depois da alocação manual via /formatar-escala) ---
   const [textoFinal, setTextoFinal] = useState("");
   const [copiado, setCopiado] = useState(false);
 
@@ -69,14 +69,14 @@ export default function TelaGerarEscala({ onVoltar }) {
       });
   }, []);
 
-  // Quando a fila de pendÃªncias zera (todo mundo foi alocado ou pulado),
+  // Quando a fila de pendências zera (todo mundo foi alocado ou pulado),
   // manda o mapa final pro backend formatar o texto e vai pra tela de
   // resultado.
   useEffect(() => {
     if (estado !== "resolvendo-conflitos" || !mapaAtual) return;
     if (filaRestante.length > 0) return;
 
-    console.log(`${DEBUG_TAG} Fila de alocaÃ§Ã£o manual zerada. Formatando texto final...`);
+    console.log(`${DEBUG_TAG} Fila de alocação manual zerada. Formatando texto final...`);
     setEstado("formatando");
 
     formatarEscala({ mapa: mapaAtual, naoAlocados: naoAlocadosFinal })
@@ -104,9 +104,9 @@ export default function TelaGerarEscala({ onVoltar }) {
         setResultado(data);
 
         if (data.nao_alocados && data.nao_alocados.length > 0) {
-          // Tem gente sem sala: entra na fase de alocaÃ§Ã£o manual antes
+          // Tem gente sem sala: entra na fase de alocação manual antes
           // de mostrar o resultado final.
-          console.log(`${DEBUG_TAG} ${data.nao_alocados.length} paciente(s) sem sala. Iniciando alocaÃ§Ã£o manual...`);
+          console.log(`${DEBUG_TAG} ${data.nao_alocados.length} paciente(s) sem sala. Iniciando alocação manual...`);
           setMapaAtual(clonarMapa(data.mapa));
           setNaoAlocadosFinal([...data.nao_alocados]);
           setFilaRestante([...data.nao_alocados]);
@@ -147,7 +147,7 @@ export default function TelaGerarEscala({ onVoltar }) {
 
   function handlePular(itemOriginal) {
     console.log(`${DEBUG_TAG} Pulando / deixando sem sala: ${itemOriginal}`);
-    // Continua em naoAlocadosFinal (jÃ¡ estÃ¡ lÃ¡ desde o inÃ­cio) â€” sÃ³ avanÃ§a a fila.
+    // Continua em naoAlocadosFinal (já está lá desde o início) — só avança a fila.
     setFilaRestante((prev) => prev.slice(1));
   }
 
@@ -157,8 +157,8 @@ export default function TelaGerarEscala({ onVoltar }) {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
     } catch (e) {
-      console.error(`${DEBUG_TAG} Erro ao copiar pra Ã¡rea de transferÃªncia:`, e);
-      setErro("NÃ£o consegui copiar automaticamente. Selecione o texto manualmente.");
+      console.error(`${DEBUG_TAG} Erro ao copiar pra área de transferência:`, e);
+      setErro("Não consegui copiar automaticamente. Selecione o texto manualmente.");
     }
   }
 
@@ -167,14 +167,14 @@ export default function TelaGerarEscala({ onVoltar }) {
       <MinecraftPanel title="Gerar Escala">
         {estado === "carregando-abas" && (
           <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>
-            ðŸŸ¡ Carregando abas da planilha...
+            🟡 Carregando abas da planilha...
           </p>
         )}
 
         {estado === "erro" && (
           <>
             <p style={{ fontSize: 16, color: "#8B0000", textAlign: "center", marginBottom: 12 }}>
-              ðŸ”´ {erro}
+              🔴 {erro}
             </p>
             <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
           </>
@@ -242,7 +242,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                 }}
               >
                 <p style={{ fontSize: 12, color: "#aaaaaa", textAlign: "center", marginBottom: 6 }}>
-                  PRÃ“XIMOS DA FILA:
+                  PRÓXIMOS DA FILA:
                 </p>
                 <p style={{ fontSize: 14, color: "#2ecc71", textAlign: "center" }}>
                   {filaDetalhada}
@@ -275,8 +275,8 @@ export default function TelaGerarEscala({ onVoltar }) {
                   const ocupantes = mapaAtual[sala][horario] || "";
                   const qtd = ocupantes ? ocupantes.split(" / ").length : 0;
 
-                  // Igual ao app antigo: sala com 3 ou mais pessoas nÃ£o
-                  // aparece como opÃ§Ã£o pra evitar amontoar demais.
+                  // Igual ao app antigo: sala com 3 ou mais pessoas não
+                  // aparece como opção pra evitar amontoar demais.
                   if (qtd >= 3) return null;
 
                   const label = qtd === 0 ? `${sala} | (Vazia)` : `${sala} | Com: ${ocupantes}`;
@@ -305,14 +305,14 @@ export default function TelaGerarEscala({ onVoltar }) {
 
         {estado === "formatando" && (
           <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>
-            ðŸŸ¡ Organizando escala final...
+            🟡 Organizando escala final...
           </p>
         )}
 
         {estado === "resultado" && resultado && (
           <>
             <p style={{ fontSize: 16, color: "#2B2B2B", marginBottom: 4 }}>
-              âœ… {resultado.total_pacientes_processados} assistidos processados
+              ✅ {resultado.total_pacientes_processados} assistidos processados
             </p>
 
             {naoAlocadosFinal.length > 0 && (
@@ -326,7 +326,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                   color: "#2B2B2B",
                 }}
               >
-                âš ï¸ {naoAlocadosFinal.length} sem sala alocada:
+                ⚠️ {naoAlocadosFinal.length} sem sala alocada:
                 <br />
                 {naoAlocadosFinal.join(", ")}
               </div>
@@ -350,10 +350,10 @@ export default function TelaGerarEscala({ onVoltar }) {
             </div>
 
             <MinecraftButton onClick={handleCopiar}>
-              {copiado ? "âœ… VacÃ¢ncia copiada!" : "Copiar VacÃ¢ncia"}
+              {copiado ? "✅ Vacância copiada!" : "Copiar Vacância"}
             </MinecraftButton>
 
-            <MinecraftButton onClick={onVoltar}>Voltar ao inÃ­cio</MinecraftButton>
+            <MinecraftButton onClick={onVoltar}>Voltar ao início</MinecraftButton>
           </>
         )}
       </MinecraftPanel>
