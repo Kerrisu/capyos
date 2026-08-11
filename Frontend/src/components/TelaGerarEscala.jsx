@@ -28,6 +28,30 @@ function parsePendencia(item) {
   return { horario: item.slice(0, idx).trim(), nome: item.slice(idx + 3).trim() };
 }
 
+// Agrupa a fila de pendências por horário, na ordem real dos horários do
+// dia (não alfabética) — horários fora da lista conhecida vão pro final,
+// ordenados entre si.
+function agruparPorHorario(fila) {
+  const grupos = {};
+
+  fila.forEach((item) => {
+    const { horario, nome } = parsePendencia(item);
+    if (!grupos[horario]) grupos[horario] = [];
+    grupos[horario].push(nome);
+  });
+
+  return Object.keys(grupos)
+    .sort((a, b) => {
+      const ia = HORARIOS.indexOf(a);
+      const ib = HORARIOS.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    })
+    .map((horario) => ({ horario, nomes: grupos[horario] }));
+}
+
 function ordenarSalas(mapa) {
   return Object.keys(mapa).sort((a, b) => {
     const na = parseInt(a.split(" ")[1], 10);
@@ -247,12 +271,7 @@ export default function TelaGerarEscala({ onVoltar }) {
         {estado === "resolvendo-conflitos" && filaRestante.length > 0 && (() => {
           const itemAtual = filaRestante[0];
           const { horario, nome } = parsePendencia(itemAtual);
-          const filaDetalhada = filaRestante
-            .map((item) => {
-              const p = parsePendencia(item);
-              return `${p.nome} (${p.horario})`;
-            })
-            .join("  |  ");
+          const gruposFila = agruparPorHorario(filaRestante);
 
           return (
             <>
@@ -264,12 +283,24 @@ export default function TelaGerarEscala({ onVoltar }) {
                   border: "2px solid #373737",
                 }}
               >
-                <p style={{ fontSize: 12, color: "#aaaaaa", textAlign: "center", marginBottom: 6 }}>
+                <p style={{ fontSize: 12, color: "#aaaaaa", textAlign: "center", marginBottom: 8 }}>
                   PRÓXIMOS DA FILA:
                 </p>
-                <p style={{ fontSize: 14, color: "#2ecc71", textAlign: "center" }}>
-                  {filaDetalhada}
-                </p>
+                {gruposFila.map((grupo) => (
+                  <div key={grupo.horario} className="fila-grupo">
+                    <span className="fila-horario-badge">{grupo.horario}</span>
+                    <span className="fila-contagem">
+                      {grupo.nomes.length} {grupo.nomes.length === 1 ? "assistido" : "assistidos"}
+                    </span>
+                    <div className="fila-nomes">
+                      {grupo.nomes.map((n, i) => (
+                        <p key={i} className="fila-nome">
+                          {n}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <p className="alocando-agora">
