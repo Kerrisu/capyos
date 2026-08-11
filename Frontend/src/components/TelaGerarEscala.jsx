@@ -36,6 +36,29 @@ function ordenarSalas(mapa) {
   });
 }
 
+// Renderiza "ABA 07 | Com: BEATRIZ ARAUJO / LILIA MELO" com cada ocupante
+// em uma cor de destaque diferente (1º verde escuro, 2º amarelo escuro,
+// 3º em diante vermelho escuro), já que o fundo do botão é claro.
+function LabelSala({ sala, ocupantes }) {
+  if (!ocupantes) {
+    return <>{sala} | (Vazia)</>;
+  }
+
+  const nomes = ocupantes.split(" / ");
+
+  return (
+    <>
+      {sala} | Com:{" "}
+      {nomes.map((nome, i) => (
+        <span key={i} className={`sala-nome--${Math.min(i, 2)}`}>
+          {nome}
+          {i < nomes.length - 1 ? " / " : ""}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export default function TelaGerarEscala({ onVoltar }) {
   const [estado, setEstado] = useState("carregando-abas");
   const [abas, setAbas] = useState([]);
@@ -249,15 +272,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                 </p>
               </div>
 
-              <p
-                style={{
-                  fontSize: 18,
-                  fontWeight: "bold",
-                  color: "#2ecc71",
-                  textAlign: "center",
-                  marginBottom: 10,
-                }}
-              >
+              <p className="alocando-agora">
                 ALOCANDO AGORA: {nome} ({horario})
               </p>
 
@@ -279,14 +294,13 @@ export default function TelaGerarEscala({ onVoltar }) {
                   // aparece como opção pra evitar amontoar demais.
                   if (qtd >= 3) return null;
 
-                  const label = qtd === 0 ? `${sala} | (Vazia)` : `${sala} | Com: ${ocupantes}`;
-
                   return (
                     <div key={sala} style={{ marginBottom: 6 }}>
                       <MinecraftButton
+                        className="mc-button--sala"
                         onClick={() => handleEscolherSala(sala, horario, nome, itemAtual)}
                       >
-                        {label}
+                        <LabelSala sala={sala} ocupantes={ocupantes} />
                       </MinecraftButton>
                     </div>
                   );
@@ -294,8 +308,8 @@ export default function TelaGerarEscala({ onVoltar }) {
               </div>
 
               <MinecraftButton
+                className="mc-button--danger"
                 onClick={() => handlePular(itemAtual)}
-                style={{ background: "#c0392b" }}
               >
                 Pular / Deixar sem sala
               </MinecraftButton>
