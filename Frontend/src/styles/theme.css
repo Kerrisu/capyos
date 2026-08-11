@@ -28,7 +28,17 @@ body {
   margin: 0;
   font-family: 'VT323', monospace;
   color: var(--mc-text-dark);
-  background: linear-gradient(180deg, var(--mc-sky-top) 0%, var(--mc-sky-bottom) 100%);
+  /* Fundo do site: arte do Ken (quebra-cabeça + elementos pixel art sobre
+     azul). background-color é o fallback enquanto a imagem carrega ou caso
+     falhe. "cover" corta as bordas em telas muito largas/estreitas em vez
+     de repetir — a moldura de quebra-cabeça só existe no topo, então
+     repetir faria ela aparecer duplicada no meio da tela. */
+  background-color: var(--mc-sky-bottom);
+  background-image: url('../assets/bg_capyos.png');
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   min-height: 100vh;
   /* Respeita a área segura do notch/ilha dinâmica em iPhones (viewport-fit=cover no index.html) */
   padding-top: env(safe-area-inset-top);
@@ -203,6 +213,66 @@ body {
   0%, 100% { transform: scale(1) translateY(0); }
   50% { transform: scale(1.02) translateY(-2px); }
 }
+
+/* ===== Tela de loading ("acordando servidor") ===== */
+.tela-loading {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+}
+.tela-loading .capybara {
+  width: 140px;
+  margin-bottom: 20px;
+  /* aqui a capivara já está andando (gif), não precisa da respiração do parado */
+  animation: none;
+}
+.loading-texto {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: #fff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+  margin-bottom: 8px;
+}
+.loading-subtexto {
+  font-size: 18px;
+  color: #F0F8FF;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+  margin-bottom: 24px;
+}
+.loading-barra-container {
+  width: 100%;
+  max-width: 320px;
+  height: 20px;
+  background: var(--mc-panel-dark);
+  border-top: 3px solid var(--mc-panel-dark);
+  border-left: 3px solid var(--mc-panel-dark);
+  border-bottom: 3px solid var(--mc-panel-light);
+  border-right: 3px solid var(--mc-panel-light);
+  overflow: hidden;
+  position: relative;
+}
+/* Barra indeterminada: como o tempo de cold start do Render varia,
+   não fingimos uma porcentagem — só um bloco animando de um lado a
+   outro, junto com o contador de segundos no texto acima. */
+.loading-barra-preenchimento {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: #2ecc71;
+  animation: loading-indeterminado 1.4s ease-in-out infinite;
+}
+@keyframes loading-indeterminado {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
 /* Telas pequenas de celular (iPhone SE, Android compacto, etc.) */
 @media (max-width: 380px) {
   .mc-panel {
@@ -229,10 +299,22 @@ body {
   .capybara {
     width: 90px;
   }
+  .tela-loading .capybara {
+    width: 100px;
+  }
+  .loading-texto {
+    font-size: 11px;
+  }
+  .loading-subtexto {
+    font-size: 15px;
+  }
 }
 /* Telas bem baixas (celular em modo paisagem) — evita cortar conteúdo */
 @media (max-height: 480px) and (orientation: landscape) {
   .capybara {
     width: 60px;
+  }
+  .tela-loading .capybara {
+    width: 70px;
   }
 }
