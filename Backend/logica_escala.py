@@ -142,10 +142,10 @@ def _remover_sufixo_parenteses(texto):
 
     IMPORTANTE (bug encontrado na Parte 2): sem isso, o nome com
     parêntese não batia com nada — nem com o cadastro em `pacientes_db`,
-    nem com os dicionários `apelidos`/`super_grupo` em
-    `distribuir_salas_ia` — porque todos eles comparam a string exata do
-    nome. Resultado: o assistido perdia silenciosamente sala fixa,
-    prioridade clínica e posição no super grupo, sem nenhum erro visível.
+    nem com o dicionário `apelidos` em `distribuir_salas_ia` — porque
+    todos eles comparam a string exata do nome. Resultado: o assistido
+    perdia silenciosamente sala fixa, prioridade clínica e grupo de
+    compatibilidade (`grupo_match`), sem nenhum erro visível.
     Aplicado aqui, o mais cedo possível na leitura da célula, pra ser a
     única fonte de verdade — tudo que vem depois (banco, apelidos,
     super_grupo, texto final) já trabalha só com o nome limpo.
@@ -379,18 +379,16 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     pacientes_db = configuracoes.get("pacientes", {})
     regras_gerais = configuracoes.get("configuracoes_gerais", {})
 
-    # CORRIGIDO (Parte 2, item 3 - padronização de nomes): a lista antiga
-    # tinha "CHRISTIAN RAFAEL" (com H) e "LUCAS EMANUEL" (um M) — nenhum dos
-    # dois bate com a grafia real usada na planilha nem no banco
-    # (CRISTIAN RAFAEL sem H, LUCAS EMMANUEL com dois M). Como a comparação
-    # é feita depois de já ter passado pelo dicionário `apelidos` abaixo,
-    # essa lista precisa usar sempre a grafia CANÔNICA (a do banco).
-    super_grupo = [
-        "LUCCA CAVALCANTI", "LUCAS EMMANUEL", "JONATHAN BEZERRA", "CRISTIAN RAFAEL",
-        "LUCCA GREGO", "CALEB SANTOS", "YCARO AZEVEDO",
-        "YURI AZEVEDO", "MURILO GONÇALVES", "DAVI HEITOR", "LUCAS BENTO", "JOSE MARCOS",
-        "BERNARDO RIBEIRO", "WILLIAM ALVES"
-    ]
+    # REMOVIDO (Parte 2, item "grupo_match"): a lista `super_grupo` que
+    # existia aqui hardcoded foi levantada manualmente há um tempo e ficou
+    # desatualizada (faltavam vários assistidos que dividem sala tranquilo,
+    # e sobrava gente que na real não deveria estar lá). Ela foi
+    # substituída pelo campo `grupo_match` no banco (Neon), que é
+    # atualizável pela tela de Gerenciar Assistidos sem precisar mexer em
+    # código. Todo assistido com `grupo_match` preenchido com o mesmo valor
+    # (hoje: "flexivel") é tratado como parte do grupo que divide sala com
+    # qualquer perfil compatível — ver uso mais abaixo, na hora de decidir
+    # se alguém pode entrar numa sala já ocupada.
 
     # ATUALIZADO (Parte 2, item 3 - padronização de nomes entre planilha e
     # banco). Cada chave é uma variante encontrada na planilha real
@@ -476,7 +474,7 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     fila = sorted(lista_pacientes, key=lambda x: (
         not pacientes_db.get(apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()), {}).get('sala_fixa', ''),
         not pacientes_db.get(apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()), {}).get('prioridade_clinica', False),
-        apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()) not in super_grupo
+        not pacientes_db.get(apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()), {}).get('grupo_match')
     ))
 
     for p in fila:
@@ -537,8 +535,11 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
                     pode_entrar = not info_dono.get("sala_fixa") and info_dono.get("divide_sala", True)
 
                     if pode_entrar and len(conteudo_atual.split(" / ")) < 2:
-                        mesmo_grupo = info.get("grupo_match") == info_dono.get("grupo_match") and info.get("grupo_match") is not None
-                        if mesmo_grupo or nome in super_grupo:
+                        mesmo_grupo = (
+                            info.get("grupo_match") is not None
+                            and info.get("grupo_match") == info_dono.get("grupo_match")
+                        )
+                        if mesmo_grupo:
                             mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
                             sala_destinada = sala
                             break
