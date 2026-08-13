@@ -1,12 +1,10 @@
-import capyDormindo from "../assets/capy_dormindo.gif";
+// Trocado (Parte 2): saiu o sistema de poses em gif (capy_dormindo.gif,
+// capy_andando.gif etc.) e entrou o ícone estático do PWA. O componente
+// continua aceitando as props `pose` e `alt` por compatibilidade com quem
+// já chama <Capybara pose="..." /> em outro lugar do código — só que
+// `pose` não faz mais nada, sempre renderiza o mesmo ícone.
+const ICONE_CAPYOS = "/icons/icon-192.png";
 
-// Conforme mais poses forem chegando (referência de 9 reações que o Ken
-// tem), é só importar o arquivo novo e adicionar uma entrada aqui.
-const POSES = {
-  dormindo: capyDormindo,
-};
-
-export default function Capybara({ pose = "dormindo", alt = "Capivara CapyOS" }) {
-  const src = POSES[pose] || POSES.dormindo;
-  return <img src={src} alt={alt} className="capybara" />;
+export default function Capybara({ pose, alt = "Capivara CapyOS" }) {
+  return <img src={ICONE_CAPYOS} alt={alt} className="capybara" />;
 }
