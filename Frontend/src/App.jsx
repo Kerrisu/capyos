@@ -1,35 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import MinecraftButton from "./components/MinecraftButton";
 import MinecraftPanel from "./components/MinecraftPanel";
 import Capybara from "./components/Capybara";
 import TelaGerarEscala from "./components/TelaGerarEscala";
 import TelaPacientes from "./components/TelaPacientes";
 import TelaLoading from "./components/TelaLoading";
-import { getHealth } from "./api/capyos";
 import "./styles/theme.css";
+
 export default function App() {
   // Enquanto "carregando" for true, a TelaLoading fica pingando /health e
   // segura a renderização do resto do app — assim o Ken não vê a tela
   // "verificando conexão" piscando junto com o conteúdo normal.
+  //
+  // Removido (Parte 2): o indicador 🟢/🔴 de status do backend que ficava
+  // aqui embaixo do título. A TelaLoading já garante que o backend
+  // respondeu antes de chegar nessa tela, então o indicador era
+  // redundante — não existe mais "statusBackend" nem o ping repetido de
+  // /health depois do carregamento inicial.
   const [carregando, setCarregando] = useState(true);
-  const [statusBackend, setStatusBackend] = useState("verificando"); // verificando | online | offline
   const [tela, setTela] = useState("home"); // home | gerar-escala | pacientes
-  useEffect(() => {
-    if (carregando) return; // TelaLoading já confirmou que o backend respondeu; isso aqui é só pro indicador de status que segue depois
-    getHealth()
-      .then(() => setStatusBackend("online"))
-      .catch(() => setStatusBackend("offline"));
-  }, [carregando]);
 
   if (carregando) {
     return <TelaLoading onPronto={() => setCarregando(false)} />;
   }
 
-  const statusInfo = {
-    verificando: { texto: "🟡 Verificando conexão com o backend...", cor: "#F0F8FF" },
-    online: { texto: "🟢 Backend conectado", cor: "#D4FFD4" },
-    offline: { texto: "🔴 Backend offline (confere se o uvicorn está rodando)", cor: "#FFD4D4" },
-  }[statusBackend];
   return (
     <div
       style={{
@@ -46,19 +40,8 @@ export default function App() {
       <h1 className="mc-title" style={{ fontSize: 22, marginBottom: 6, textAlign: "center" }}>
         CapyOS
       </h1>
-      <p style={{ fontSize: 20, color: "#F0F8FF", textShadow: "2px 2px 0 rgba(0,0,0,0.35)", marginBottom: 8 }}>
+      <p style={{ fontSize: 20, color: "#F0F8FF", textShadow: "2px 2px 0 rgba(0,0,0,0.35)", marginBottom: 20 }}>
         Direcionamento de Salas
-      </p>
-      <p
-        style={{
-          fontSize: 16,
-          color: statusInfo.cor,
-          textShadow: "1px 1px 0 rgba(0,0,0,0.4)",
-          marginBottom: 20,
-          textAlign: "center",
-        }}
-      >
-        {statusInfo.texto}
       </p>
       {tela === "home" && (
         <div style={{ width: "100%", maxWidth: 420 }}>
