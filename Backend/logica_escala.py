@@ -451,15 +451,35 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     salas_terreo = regras_gerais.get("ordem_salas_terreo", [])
     bloqueadas = regras_gerais.get("salas_bloqueadas", [])
 
-    # A ordem de preferência agora vem do config_pacientes.json (chave
-    # "ordem_salas_preferencial" dentro de configuracoes_gerais). Se não
-    # existir lá (ex: config antigo), usamos essa lista como valor padrão
-    # de segurança, idêntica à que sempre esteve fixa no código.
-    ordem_padrao_fallback = ["ABA 13", "ABA 12", "ABA 11", "ABA 10", "ABA 09", "ABA 08", "ABA 07", "ABA 05", "ABA 01", "ABA 02", "ABA 03", "ABA 04"]
-    ordem_preferencial = regras_gerais.get("ordem_salas_preferencial", ordem_padrao_fallback)
-    if "ordem_salas_preferencial" not in regras_gerais:
-        print(f"{DEBUG_TAG} AVISO: 'ordem_salas_preferencial' não está no config_pacientes.json, usando lista padrão de fallback.")
-    salas_ativas = [s for s in ordem_preferencial if s not in bloqueadas]
+    # REMOVIDO ("no flow" - item 2): a lista fixa `ordem_salas_preferencial`
+    # que existia aqui (ex: sempre tentar ABA 13, depois ABA 12, ABA 11...)
+    # saiu de cena. A prioridade de sala agora não é mais uma ordem fixa —
+    # é decidida sala a sala, na hora, com base no andar (mezanino/térreo)
+    # e na preferência/restrição de cada assistido. Ver `_ordenar_por_sala`
+    # e o novo bloco de alocação mais abaixo.
+    #
+    # `TODAS_AS_SALAS` é só o universo de salas conhecidas do sistema —
+    # sem preferência nenhuma embutida. Se um dia existir sala nova, ela só
+    # precisa entrar aqui (ou vir de config_pacientes.json, se preferir
+    # manter configurável).
+    TODAS_AS_SALAS = ["ABA 01", "ABA 02", "ABA 03", "ABA 04", "ABA 05", "ABA 06",
+                       "ABA 07", "ABA 08", "ABA 09", "ABA 10", "ABA 11", "ABA 12", "ABA 13"]
+    todas_as_salas_config = regras_gerais.get("todas_as_salas", TODAS_AS_SALAS)
+    salas_ativas = [s for s in todas_as_salas_config if s not in bloqueadas]
+
+    def _numero_sala(nome_sala):
+        """Extrai o número da sala pra ordenação (ex: 'ABA 09' -> 9)."""
+        try:
+            return int(nome_sala.split()[1])
+        except (IndexError, ValueError):
+            return 0
+
+    # Salas ativas separadas por andar, em ordem crescente de número.
+    # A ordem entre salas do MESMO andar não importa pro resultado (Ken
+    # confirmou) — ficou crescente só pra ser determinística e fácil de
+    # depurar (rodar a mesma escala duas vezes dá o mesmo resultado).
+    salas_mezanino_ativas = sorted([s for s in salas_ativas if s not in salas_terreo], key=_numero_sala)
+    salas_terreo_ativas = sorted([s for s in salas_ativas if s in salas_terreo], key=_numero_sala)
 
     horarios = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"]
     mapa_final = {sala: {h: "" for h in horarios} for sala in salas_ativas + bloqueadas}
@@ -471,11 +491,29 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
         print(f"{DEBUG_TAG} ERRO: lista_pacientes não é uma lista (provavelmente veio uma mensagem de erro do processar_escala): {lista_pacientes}")
         return mapa_final, nao_alocados
 
-    fila = sorted(lista_pacientes, key=lambda x: (
-        not pacientes_db.get(apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()), {}).get('sala_fixa', ''),
-        not pacientes_db.get(apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()), {}).get('prioridade_clinica', False),
-        not pacientes_db.get(apelidos.get(x['nome'].strip().upper(), x['nome'].strip().upper()), {}).get('grupo_match')
-    ))
+    def _chave_prioridade_fila(item):
+        """
+        Ordem de prioridade da fila (confirmada com o Ken):
+        1º sala fixa           - precisa da sala dela, sem excessão
+        2º resistência a escada - necessidade física, não pode ficar sem sala
+        3º não divide sala      - perfil exige sala exclusiva, também não
+                                   pode ficar sem alocação
+        4º prioridade clínica
+        5º resto (o campo grupo_match só entra aqui pra decidir se DIVIDE
+           bem com quem já está numa sala, não pra furar fila)
+        """
+        nome_bruto = item['nome'].strip().upper()
+        nome = apelidos.get(nome_bruto, nome_bruto)
+        info_paciente = pacientes_db.get(nome, {})
+        return (
+            not info_paciente.get('sala_fixa', ''),
+            not info_paciente.get('resistencia_escada', False),
+            info_paciente.get('divide_sala', True),
+            not info_paciente.get('prioridade_clinica', False),
+            not info_paciente.get('grupo_match'),
+        )
+
+    fila = sorted(lista_pacientes, key=_chave_prioridade_fila)
 
     for p in fila:
         nome_original = p['nome'].strip().upper()
@@ -518,45 +556,77 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
                 mapa_final[sf][horario] = nome
 
         if not sala_destinada:
-            for sala in salas_ativas:
-                conteudo_atual = mapa_final[sala][horario]
+            # "NO FLOW" (item 2): a ordem de tentativa agora é decidida por
+            # andar, não mais por uma lista fixa de salas.
+            # - Resistência a escada: só pode ir pro térreo (regra que já
+            #   existia, mantida sem mudança nenhuma).
+            # - Todo mundo mais — com `preferencia_mezanino` true OU false,
+            #   Ken confirmou tratar os dois casos igual — tenta o mezanino
+            #   primeiro, e só cai pro térreo se não tiver opção lá.
+            if info.get("resistencia_escada"):
+                ordem_andares = [salas_terreo_ativas]
+            else:
+                ordem_andares = [salas_mezanino_ativas, salas_terreo_ativas]
 
-                if not conteudo_atual:
-                    if info.get("resistencia_escada") and sala not in salas_terreo:
-                        continue
-                    sala_destinada = sala
-                    mapa_final[sala][horario] = nome
+            # --- FASE 1: sala vazia, respeitando a ordem de andar acima ---
+            for grupo_salas in ordem_andares:
+                if sala_destinada:
                     break
-                else:
-                    dono_nome_bruto = conteudo_atual.split(" / ")[0].strip()
-                    dono_nome = apelidos.get(dono_nome_bruto.upper(), dono_nome_bruto.upper())
-                    info_dono = pacientes_db.get(dono_nome, {})
+                for sala in grupo_salas:
+                    if not mapa_final[sala][horario]:
+                        sala_destinada = sala
+                        mapa_final[sala][horario] = nome
+                        break
 
-                    pode_entrar = not info_dono.get("sala_fixa") and info_dono.get("divide_sala", True)
+            # --- FASE 2: nenhuma sala vazia -> tenta dividir, priorizando
+            # mezanino antes de térreo de novo (mesma ordem de andar) ---
+            if not sala_destinada:
+                for grupo_salas in ordem_andares:
+                    if sala_destinada:
+                        break
+                    for sala in grupo_salas:
+                        conteudo_atual = mapa_final[sala][horario]
+                        if not conteudo_atual:
+                            continue
 
-                    if pode_entrar and len(conteudo_atual.split(" / ")) < 2:
-                        mesmo_grupo = (
-                            info.get("grupo_match") is not None
-                            and info.get("grupo_match") == info_dono.get("grupo_match")
-                        )
-                        if mesmo_grupo:
-                            mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
-                            sala_destinada = sala
-                            break
+                        dono_nome_bruto = conteudo_atual.split(" / ")[0].strip()
+                        dono_nome = apelidos.get(dono_nome_bruto.upper(), dono_nome_bruto.upper())
+                        info_dono = pacientes_db.get(dono_nome, {})
 
+                        pode_entrar = not info_dono.get("sala_fixa") and info_dono.get("divide_sala", True)
+
+                        # Máximo 2 por sala no automático (3 só na tela
+                        # manual de alocar sem sala).
+                        if pode_entrar and len(conteudo_atual.split(" / ")) < 2:
+                            mesmo_grupo = (
+                                info.get("grupo_match") is not None
+                                and info.get("grupo_match") == info_dono.get("grupo_match")
+                            )
+                            if mesmo_grupo:
+                                mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
+                                sala_destinada = sala
+                                break
+
+        # --- FASE 3 (fallback): prioridade clínica pode dividir mesmo sem
+        # bater grupo_match, como último recurso — respeitando a mesma
+        # ordem de andar e o máximo de 2 por sala no automático. ---
         if not sala_destinada and info.get("prioridade_clinica"):
-            for sala in salas_ativas:
-                conteudo_atual = mapa_final[sala][horario]
-                if conteudo_atual:
-                    dono_nome_bruto = conteudo_atual.split(" / ")[0].strip()
-                    dono_nome = apelidos.get(dono_nome_bruto.upper(), dono_nome_bruto.upper())
-                    info_dono = pacientes_db.get(dono_nome, {})
+            ordem_andares = [salas_terreo_ativas] if info.get("resistencia_escada") else [salas_mezanino_ativas, salas_terreo_ativas]
+            for grupo_salas in ordem_andares:
+                if sala_destinada:
+                    break
+                for sala in grupo_salas:
+                    conteudo_atual = mapa_final[sala][horario]
+                    if conteudo_atual:
+                        dono_nome_bruto = conteudo_atual.split(" / ")[0].strip()
+                        dono_nome = apelidos.get(dono_nome_bruto.upper(), dono_nome_bruto.upper())
+                        info_dono = pacientes_db.get(dono_nome, {})
 
-                    if not info_dono.get("sala_fixa") and info_dono.get("divide_sala", True):
-                        if len(conteudo_atual.split(" / ")) < 3:
-                            mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
-                            sala_destinada = sala
-                            break
+                        if not info_dono.get("sala_fixa") and info_dono.get("divide_sala", True):
+                            if len(conteudo_atual.split(" / ")) < 2:
+                                mapa_final[sala][horario] = f"{conteudo_atual} / {nome}"
+                                sala_destinada = sala
+                                break
 
         if sala_destinada:
             if " / " not in mapa_final[sala_destinada][horario]:
