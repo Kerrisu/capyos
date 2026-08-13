@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import capyAndando from "../assets/capy_andando.gif";
 import { getHealth } from "../api/capyos";
+
+// Trocado (Parte 2): saiu o capy_andando.gif, entrou o ícone estático do
+// PWA — mesma troca feita no componente Capybara.jsx.
+const ICONE_CAPYOS = "/icons/icon-192.png";
 
 // Render (free tier) dorme depois de ~15min parado e leva uns 50-60s pra
 // acordar de novo. Enquanto isso, ficamos pingando /health nesse intervalo
@@ -44,7 +47,7 @@ export default function TelaLoading({ onPronto }) {
 
   return (
     <div className="tela-loading">
-      <img src={capyAndando} alt="Capivara andando" className="capybara" />
+      <img src={ICONE_CAPYOS} alt="Capivara CapyOS" className="capybara" />
       <p className="loading-texto">ACORDANDO O SERVIDOR...</p>
       <p className="loading-subtexto">
         Isso pode levar cerca de 1 minuto ({segundos}s)
