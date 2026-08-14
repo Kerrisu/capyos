@@ -1,4 +1,14 @@
 import { useState, useEffect } from "react";
+import {
+  DndContext,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+} from "@dnd-kit/core";
 import MinecraftButton from "./MinecraftButton";
 import MinecraftPanel from "./MinecraftPanel";
 import { getAbas, gerarEscala, formatarEscala } from "../api/capyos";
@@ -30,14 +40,15 @@ function parsePendencia(item) {
 
 // Agrupa a fila de pendências por horário, na ordem real dos horários do
 // dia (não alfabética) — horários fora da lista conhecida vão pro final,
-// ordenados entre si.
+// ordenados entre si. Mantém o itemOriginal junto de cada nome pra dar
+// pra arrastar/remover qualquer item da fila, não só o primeiro.
 function agruparPorHorario(fila) {
   const grupos = {};
 
   fila.forEach((item) => {
     const { horario, nome } = parsePendencia(item);
     if (!grupos[horario]) grupos[horario] = [];
-    grupos[horario].push(nome);
+    grupos[horario].push({ nome, itemOriginal: item });
   });
 
   return Object.keys(grupos)
@@ -49,7 +60,7 @@ function agruparPorHorario(fila) {
       if (ib === -1) return -1;
       return ia - ib;
     })
-    .map((horario) => ({ horario, nomes: grupos[horario] }));
+    .map((horario) => ({ horario, itens: grupos[horario] }));
 }
 
 function ordenarSalas(mapa) {
@@ -60,26 +71,107 @@ function ordenarSalas(mapa) {
   });
 }
 
-// Renderiza "ABA 07 | Com: BEATRIZ ARAUJO / LILIA MELO" com cada ocupante
-// em uma cor de destaque diferente (1º verde escuro, 2º amarelo escuro,
-// 3º em diante vermelho escuro), já que o fundo do botão é claro.
-function LabelSala({ sala, ocupantes }) {
-  if (!ocupantes) {
-    return <>{sala} | (Vazia)</>;
-  }
+// Chip arrastável — representa um nome, seja na fila (sem sala) ou já
+// alocado numa sala. Estilo essencial fica INLINE (não depende do CSS
+// externo carregar certo) — o CSS externo só adiciona polish por cima.
+function NomeArrastavel({ id, nome, dragData, disabled, destaque }) {
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    id,
+    data: dragData,
+    disabled,
+  });
 
-  const nomes = ocupantes.split(" / ");
+  const style = {
+    display: "inline-block",
+    padding: "4px 9px",
+    margin: "3px 4px 3px 0",
+    background: destaque ? "#4a3a00" : "#3a3a3a",
+    border: `2px solid ${destaque ? "#FFD700" : "#666"}`,
+    color: destaque ? "#FFD700" : "#f0f0f0",
+    fontFamily: "VT323, monospace",
+    fontSize: 16,
+    cursor: disabled ? "default" : isDragging ? "grabbing" : "grab",
+    opacity: disabled ? 0.35 : isDragging ? 0.5 : 1,
+    touchAction: "none",
+    userSelect: "none",
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    zIndex: isDragging ? 999 : "auto",
+    position: isDragging ? "relative" : "static",
+  };
 
   return (
-    <>
-      {sala} | Com:{" "}
-      {nomes.map((nome, i) => (
-        <span key={i} className={`sala-nome--${Math.min(i, 2)}`}>
-          {nome}
-          {i < nomes.length - 1 ? " / " : ""}
+    <span
+      ref={setNodeRef}
+      {...(disabled ? {} : listeners)}
+      {...(disabled ? {} : attributes)}
+      className="nome-arrastavel"
+      style={style}
+    >
+      {nome}
+    </span>
+  );
+}
+
+// Uma sala como zona de drop. Mostra os ocupantes atuais como chips
+// arrastáveis (pra dar pra mover pra OUTRA sala) e um botão "Alocar aqui"
+// como atalho de clique pro item que está no topo da fila (ALOCANDO AGORA).
+// Sem limite rígido: dá pra soltar em cima de uma sala cheia, só acende
+// o aviso laranja.
+function SalaSlot({ sala, horario, ocupantes, onClickSala }) {
+  const { setNodeRef, isOver } = useDroppable({ id: sala, data: { sala, horario } });
+  const nomes = ocupantes ? ocupantes.split(" / ").filter(Boolean) : [];
+  const qtd = nomes.length;
+  const vaiEstourar = isOver && qtd >= 2;
+
+  const corContagem = qtd === 0 ? "#888" : qtd <= 2 ? "#4CAF50" : "#FFA500";
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="sala-slot"
+      style={{
+        background: isOver ? (vaiEstourar ? "#3a2f1f" : "#1f3a1f") : "#2b2b2b",
+        border: `2px solid ${isOver ? (vaiEstourar ? "#FFA500" : "#4CAF50") : "#555"}`,
+        padding: "6px 8px",
+        marginBottom: 8,
+        transition: "border-color 0.1s, background 0.1s",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <span style={{ color: "#e8e8e8", fontFamily: "VT323, monospace", fontSize: 17 }}>{sala}</span>
+        <span
+          style={{
+            fontFamily: "VT323, monospace",
+            fontSize: 13,
+            padding: "1px 6px",
+            border: `1px solid ${corContagem}`,
+            color: corContagem,
+          }}
+        >
+          {qtd}/2{qtd > 2 ? "+" : ""}
         </span>
-      ))}
-    </>
+      </div>
+
+      <div style={{ minHeight: 30, marginBottom: 6 }}>
+        {nomes.length === 0 && (
+          <span style={{ color: "#666", fontFamily: "VT323, monospace", fontSize: 14, fontStyle: "italic" }}>
+            (vazia)
+          </span>
+        )}
+        {nomes.map((nome) => (
+          <NomeArrastavel
+            key={`${sala}-${horario}-${nome}`}
+            id={`sala::${sala}::${horario}::${nome}`}
+            nome={nome}
+            dragData={{ origem: "sala", sala, horario, nome }}
+          />
+        ))}
+      </div>
+
+      <MinecraftButton className="mc-button--sala mc-button--sala-slot" onClick={onClickSala}>
+        Alocar aqui
+      </MinecraftButton>
+    </div>
   );
 }
 
@@ -99,6 +191,14 @@ export default function TelaGerarEscala({ onVoltar }) {
   // depois da alocação manual via /formatar-escala) ---
   const [textoFinal, setTextoFinal] = useState("");
   const [copiado, setCopiado] = useState(false);
+
+  // PointerSensor com distância mínima evita que um clique simples vire
+  // drag sem querer. TouchSensor com delay evita brigar com o scroll no
+  // celular (segura um pouco antes de começar a arrastar).
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
+  );
 
   useEffect(() => {
     console.log(`${DEBUG_TAG} TelaGerarEscala montada. Buscando abas...`);
@@ -151,8 +251,6 @@ export default function TelaGerarEscala({ onVoltar }) {
         setResultado(data);
 
         if (data.nao_alocados && data.nao_alocados.length > 0) {
-          // Tem gente sem sala: entra na fase de alocação manual antes
-          // de mostrar o resultado final.
           console.log(`${DEBUG_TAG} ${data.nao_alocados.length} paciente(s) sem sala. Iniciando alocação manual...`);
           setMapaAtual(clonarMapa(data.mapa));
           setNaoAlocadosFinal([...data.nao_alocados]);
@@ -180,6 +278,11 @@ export default function TelaGerarEscala({ onVoltar }) {
     setEstado("pronto");
   }
 
+  // Aloca alguém que ainda está na fila (sem sala) numa sala. Usado pelo
+  // botão "Alocar aqui" e por um drag vindo da fila. Usa filter (não
+  // slice) pra funcionar com qualquer item da fila, não só o primeiro —
+  // isso permite arrastar qualquer pendência do horário atual, não só a
+  // que está "ALOCANDO AGORA".
   function handleEscolherSala(sala, horario, nome, itemOriginal) {
     console.log(`${DEBUG_TAG} Alocando manualmente: ${nome} (${horario}) -> ${sala}`);
     setMapaAtual((prev) => {
@@ -189,13 +292,49 @@ export default function TelaGerarEscala({ onVoltar }) {
       return novo;
     });
     setNaoAlocadosFinal((prev) => prev.filter((x) => x !== itemOriginal));
-    setFilaRestante((prev) => prev.slice(1));
+    setFilaRestante((prev) => prev.filter((x) => x !== itemOriginal));
+  }
+
+  // Move alguém que JÁ está numa sala pra outra sala, no mesmo horário.
+  // Só sai da sala de origem e entra na de destino — nunca troca de
+  // posição com quem já está lá. Sem limite: pode passar de 2, é
+  // intencional (soft warning fica só na cor do slot durante o drag).
+  function handleMoverEntreSalas(nome, horario, salaOrigem, salaDestino) {
+    if (salaOrigem === salaDestino) return;
+    console.log(`${DEBUG_TAG} Movendo: ${nome} (${horario}) ${salaOrigem} -> ${salaDestino}`);
+    setMapaAtual((prev) => {
+      const novo = clonarMapa(prev);
+
+      const nomesOrigem = (novo[salaOrigem][horario] || "")
+        .split(" / ")
+        .filter((n) => n && n !== nome);
+      novo[salaOrigem][horario] = nomesOrigem.join(" / ");
+
+      const destinoAtual = novo[salaDestino][horario];
+      novo[salaDestino][horario] = destinoAtual ? `${destinoAtual} / ${nome}` : nome;
+
+      return novo;
+    });
   }
 
   function handlePular(itemOriginal) {
     console.log(`${DEBUG_TAG} Pulando / deixando sem sala: ${itemOriginal}`);
-    // Continua em naoAlocadosFinal (já está lá desde o início) — só avança a fila.
-    setFilaRestante((prev) => prev.slice(1));
+    setFilaRestante((prev) => prev.filter((x) => x !== itemOriginal));
+  }
+
+  function handleDragEnd(event) {
+    const { active, over } = event;
+    if (!over) return; // soltou fora de qualquer sala, não faz nada
+
+    const data = active.data.current;
+    if (!data) return;
+    const salaDestino = over.id;
+
+    if (data.origem === "fila") {
+      handleEscolherSala(salaDestino, data.horario, data.nome, data.itemOriginal);
+    } else if (data.origem === "sala") {
+      handleMoverEntreSalas(data.nome, data.horario, data.sala, salaDestino);
+    }
   }
 
   async function handleCopiar() {
@@ -270,11 +409,11 @@ export default function TelaGerarEscala({ onVoltar }) {
 
         {estado === "resolvendo-conflitos" && filaRestante.length > 0 && (() => {
           const itemAtual = filaRestante[0];
-          const { horario, nome } = parsePendencia(itemAtual);
+          const { horario: horarioAtual, nome: nomeAtual } = parsePendencia(itemAtual);
           const gruposFila = agruparPorHorario(filaRestante);
 
           return (
-            <>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div
                 style={{
                   background: "#2b2b2b",
@@ -284,32 +423,52 @@ export default function TelaGerarEscala({ onVoltar }) {
                 }}
               >
                 <p style={{ fontSize: 12, color: "#aaaaaa", textAlign: "center", marginBottom: 8 }}>
-                  PRÓXIMOS DA FILA:
+                  PRÓXIMOS DA FILA (arraste os do horário atual pra uma sala):
                 </p>
-                {gruposFila.map((grupo) => (
-                  <div key={grupo.horario} className="fila-grupo">
-                    <span className="fila-horario-badge">{grupo.horario}</span>
-                    <span className="fila-contagem">
-                      {grupo.nomes.length} {grupo.nomes.length === 1 ? "assistido" : "assistidos"}
-                    </span>
-                    <div className="fila-nomes">
-                      {grupo.nomes.map((n, i) => (
-                        <p key={i} className="fila-nome">
-                          {n}
-                        </p>
-                      ))}
+                {gruposFila.map((grupo) => {
+                  const doHorarioAtual = grupo.horario === horarioAtual;
+                  return (
+                    <div key={grupo.horario} style={{ marginBottom: 10 }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          background: "#2E7D32",
+                          color: "#fff",
+                          fontFamily: "VT323, monospace",
+                          fontSize: 16,
+                          padding: "2px 8px",
+                          marginRight: 8,
+                        }}
+                      >
+                        {grupo.horario}
+                      </span>
+                      <span style={{ color: "#aaa", fontFamily: "VT323, monospace", fontSize: 14 }}>
+                        {grupo.itens.length} {grupo.itens.length === 1 ? "assistido" : "assistidos"}
+                      </span>
+                      <div style={{ marginTop: 4 }}>
+                        {grupo.itens.map(({ nome, itemOriginal }) => (
+                          <NomeArrastavel
+                            key={itemOriginal}
+                            id={`fila::${itemOriginal}`}
+                            nome={nome}
+                            destaque={itemOriginal === itemAtual}
+                            disabled={!doHorarioAtual}
+                            dragData={{ origem: "fila", horario: grupo.horario, nome, itemOriginal }}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <p className="alocando-agora">
-                ALOCANDO AGORA: {nome} ({horario})
+                ALOCANDO AGORA: {nomeAtual} ({horarioAtual})
               </p>
 
               <div
                 style={{
-                  maxHeight: 260,
+                  maxHeight: 320,
                   overflowY: "auto",
                   marginBottom: 10,
                   border: "2px solid #373737",
@@ -317,25 +476,15 @@ export default function TelaGerarEscala({ onVoltar }) {
                   background: "#1f1f1f",
                 }}
               >
-                {ordenarSalas(mapaAtual).map((sala) => {
-                  const ocupantes = mapaAtual[sala][horario] || "";
-                  const qtd = ocupantes ? ocupantes.split(" / ").length : 0;
-
-                  // Igual ao app antigo: sala com 3 ou mais pessoas não
-                  // aparece como opção pra evitar amontoar demais.
-                  if (qtd >= 3) return null;
-
-                  return (
-                    <div key={sala} style={{ marginBottom: 6 }}>
-                      <MinecraftButton
-                        className="mc-button--sala"
-                        onClick={() => handleEscolherSala(sala, horario, nome, itemAtual)}
-                      >
-                        <LabelSala sala={sala} ocupantes={ocupantes} />
-                      </MinecraftButton>
-                    </div>
-                  );
-                })}
+                {ordenarSalas(mapaAtual).map((sala) => (
+                  <SalaSlot
+                    key={sala}
+                    sala={sala}
+                    horario={horarioAtual}
+                    ocupantes={mapaAtual[sala][horarioAtual] || ""}
+                    onClickSala={() => handleEscolherSala(sala, horarioAtual, nomeAtual, itemAtual)}
+                  />
+                ))}
               </div>
 
               <MinecraftButton
@@ -344,7 +493,7 @@ export default function TelaGerarEscala({ onVoltar }) {
               >
                 Pular / Deixar sem sala
               </MinecraftButton>
-            </>
+            </DndContext>
           );
         })()}
 
