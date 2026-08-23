@@ -317,8 +317,9 @@ def escrever_vacancia_rota(request: EscreverVacanciaRequest):
         print(f"{DEBUG_TAG} ERRO em /escrever-vacancia (aba não encontrada): {e}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        print(f"{DEBUG_TAG} ERRO em /escrever-vacancia: {e}")
-        raise HTTPException(status_code=500, detail=f"Erro ao escrever na Vacância: {str(e)}")
+        detalhe = f"{type(e).__name__}: {e!r}"
+        print(f"{DEBUG_TAG} ERRO em /escrever-vacancia: {detalhe}")
+        raise HTTPException(status_code=500, detail=f"Erro ao escrever na Vacância: {detalhe}")
 
     print(f"{DEBUG_TAG} /escrever-vacancia concluída. {celulas_escritas} células escritas em '{request.nome_aba}'.")
 
