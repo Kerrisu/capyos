@@ -17,11 +17,17 @@ import os
 import json
 import re
 import unicodedata
+import requests
+import openpyxl
+from io import BytesIO
 
 # --- CONFIGURAÇÕES ---
 HORARIOS_PADRAO = ["13:15H", "14:00H", "14:45H", "15:30H", "16:15H", "17:00H", "17:45H"]
 
 DEBUG_TAG = "🔧[CAPYOS-DEBUG]"
+
+DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
+MIMETYPE_SHEETS_NATIVO = "application/vnd.google-apps.spreadsheet"
 
 
 def carregar_credenciais_dict():
@@ -71,13 +77,180 @@ def conectar_google_sheets(url_planilha):
     return planilha
 
 
+def _extrair_id_arquivo(url_ou_id):
+    """Extrai o ID do arquivo a partir de uma URL do Google Drive/Sheets.
+    Se já vier só o ID (sem barras), devolve como está."""
+    match = re.search(r"/d/([a-zA-Z0-9_-]+)", url_ou_id)
+    return match.group(1) if match else url_ou_id
+
+
+def _obter_headers_autenticados():
+    """
+    Gera um header Authorization Bearer a partir das MESMAS credenciais de
+    serviço já usadas pelo gspread, pra chamadas cruas na Drive API (que o
+    gspread não cobre): checar o mimeType do arquivo e, se for um .xlsx
+    real, baixar os bytes brutos.
+
+    Não precisa de nenhum escopo novo — "spreadsheets" + "drive" (já
+    usados em conectar_google_sheets) cobrem leitura de metadados e
+    download de conteúdo.
+    """
+    escopos = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds_dict = carregar_credenciais_dict()
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, escopos)
+    token = creds.get_access_token().access_token
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _detectar_mimetype_arquivo(file_id, headers):
+    resp = requests.get(
+        f"{DRIVE_API_BASE}/files/{file_id}",
+        headers=headers,
+        params={"fields": "mimeType"},
+    )
+    resp.raise_for_status()
+    return resp.json().get("mimeType", "")
+
+
+def _hex_para_rgb_float(hex_cor):
+    """
+    Converte uma cor hex do openpyxl (formatos 'RRGGBB' ou 'AARRGGBB', o
+    canal alfa quando presente é ignorado) pra uma tupla (r, g, b) de
+    floats 0.0-1.0 — o MESMO formato que o Google Sheets API usa em
+    effectiveFormat.backgroundColor. Isso é o que permite reaproveitar
+    _cor_bate() sem nenhuma mudança pros dois tipos de fonte.
+    """
+    if not hex_cor or len(hex_cor) < 6:
+        return (1.0, 1.0, 1.0)
+    hex_rgb = hex_cor[-6:]
+    try:
+        r = int(hex_rgb[0:2], 16) / 255.0
+        g = int(hex_rgb[2:4], 16) / 255.0
+        b = int(hex_rgb[4:6], 16) / 255.0
+        return (r, g, b)
+    except ValueError:
+        return (1.0, 1.0, 1.0)
+
+
+def _construir_rows_data_de_xlsx(conteudo_bytes, nome_aba):
+    """
+    Lê um .xlsx cru (bytes, baixado direto da Drive API) com openpyxl e
+    devolve os dados no MESMO formato que fetch_sheet_metadata() do Google
+    Sheets API devolveria: uma lista de linhas, cada uma com 'values' ->
+    lista de células com 'formattedValue' e
+    'effectiveFormat.backgroundColor'. Isso é o que permite que
+    processar_escala()/inspecionar_cores() continuem exatamente iguais,
+    sem precisar de nenhum "if fonte == xlsx" espalhado pelo parsing.
+
+    data_only=True: pega o VALOR calculado das células (não a fórmula
+    crua), igual ao que formattedValue do Sheets API já devolvia.
+    """
+    workbook = openpyxl.load_workbook(BytesIO(conteudo_bytes), data_only=True)
+
+    if nome_aba in workbook.sheetnames:
+        aba = workbook[nome_aba]
+    else:
+        aba = workbook.worksheets[0]
+        print(f"{DEBUG_TAG} Aba '{nome_aba}' não encontrada no .xlsx, usando a primeira disponível: '{aba.title}'")
+
+    rows_data = []
+    for row in aba.iter_rows():
+        values = []
+        for cell in row:
+            valor = "" if cell.value is None else str(cell.value)
+
+            r, g, b = (1.0, 1.0, 1.0)
+            fill = cell.fill
+            if fill is not None and fill.patternType == "solid":
+                cor = fill.fgColor
+                if cor is not None and cor.type == "rgb" and cor.rgb and cor.rgb not in ("00000000", None):
+                    r, g, b = _hex_para_rgb_float(cor.rgb)
+
+            values.append({
+                "formattedValue": valor,
+                "effectiveFormat": {"backgroundColor": {"red": r, "green": g, "blue": b}},
+            })
+        rows_data.append({"values": values})
+
+    return rows_data, aba.title
+
+
+def _obter_rows_data(url_planilha, nome_aba):
+    """
+    Ponto único de leitura da planilha de origem. Detecta automaticamente
+    se o arquivo é uma planilha NATIVA (Google Sheets — como a planilha de
+    teste usada hoje) ou um .xlsx REAL (como o Direcionamento), e lê pelo
+    caminho certo em cada caso:
+
+    - Nativa  -> gspread + Sheets API (fetch_sheet_metadata), igual sempre foi.
+    - .xlsx   -> download bruto via Drive API (files.get?alt=media, que
+                 funciona com acesso de leitor/link — não cria nem copia
+                 nada, então não esbarra na cota-zero de Drive que
+                 service accounts têm) + parsing local com openpyxl.
+
+    Em ambos os casos devolve (rows_data, titulo_aba_usada) no MESMO
+    formato, pra processar_escala/inspecionar_cores não precisarem saber
+    qual dos dois caminhos foi usado.
+    """
+    headers = _obter_headers_autenticados()
+    file_id = _extrair_id_arquivo(url_planilha)
+    mimetype = _detectar_mimetype_arquivo(file_id, headers)
+
+    if mimetype == MIMETYPE_SHEETS_NATIVO:
+        print(f"{DEBUG_TAG} Arquivo é planilha nativa (mimeType={mimetype}). Lendo via Sheets API.")
+        planilha = conectar_google_sheets(url_planilha)
+        try:
+            aba = planilha.worksheet(nome_aba)
+        except Exception:
+            aba = planilha.get_worksheet(0)
+            print(f"{DEBUG_TAG} Aba '{nome_aba}' não encontrada, usando a primeira disponível: '{aba.title}'")
+
+        fmt = aba.spreadsheet.fetch_sheet_metadata({
+            "ranges": [aba.title],
+            "includeGridData": True,
+            "fields": "sheets.properties.title,sheets.data.rowData.values.formattedValue,sheets.data.rowData.values.effectiveFormat.backgroundColor",
+        })
+        sheet_data = [s for s in fmt['sheets'] if s['properties']['title'] == aba.title][0]
+        rows_data = sheet_data['data'][0].get('rowData', [])
+        return rows_data, aba.title
+
+    else:
+        print(f"{DEBUG_TAG} Arquivo é .xlsx real (mimeType={mimetype}). Baixando bytes brutos...")
+        resp = requests.get(
+            f"{DRIVE_API_BASE}/files/{file_id}",
+            headers=headers,
+            params={"alt": "media"},
+        )
+        resp.raise_for_status()
+        return _construir_rows_data_de_xlsx(resp.content, nome_aba)
+
+
+def _listar_nomes_abas(url_planilha):
+    """Lista os nomes das abas da planilha de origem, nativa ou .xlsx real."""
+    headers = _obter_headers_autenticados()
+    file_id = _extrair_id_arquivo(url_planilha)
+    mimetype = _detectar_mimetype_arquivo(file_id, headers)
+
+    if mimetype == MIMETYPE_SHEETS_NATIVO:
+        planilha = conectar_google_sheets(url_planilha)
+        return [aba.title for aba in planilha.worksheets()]
+    else:
+        resp = requests.get(
+            f"{DRIVE_API_BASE}/files/{file_id}",
+            headers=headers,
+            params={"alt": "media"},
+        )
+        resp.raise_for_status()
+        workbook = openpyxl.load_workbook(BytesIO(resp.content), read_only=True)
+        return workbook.sheetnames
+
+
 # FUNÇÃO PARA LISTAR ABAS DISPONÍVEIS NA PLANILHA
 def listar_abas(url_planilha):
     """Retorna uma lista com os nomes de todas as abas da planilha"""
     print(f"{DEBUG_TAG} listar_abas() chamada com url={url_planilha}")
     try:
-        planilha = conectar_google_sheets(url_planilha)
-        abas = [aba.title for aba in planilha.worksheets()]
+        abas = _listar_nomes_abas(url_planilha)
         print(f"{DEBUG_TAG} Abas encontradas: {abas}")
         return abas
     except Exception as e:
@@ -171,27 +344,8 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
         callback_progresso(0.1, "Conectando e baixando metadados...")
         print(f"{DEBUG_TAG} processar_escala() iniciada. nome_aba={nome_aba}")
 
-        planilha = conectar_google_sheets(url_planilha)
-        try:
-            aba = planilha.worksheet(nome_aba)
-            print(f"{DEBUG_TAG} Aba '{nome_aba}' encontrada.")
-        except Exception:
-            aba = planilha.get_worksheet(0)
-            print(f"{DEBUG_TAG} Aba '{nome_aba}' NÃO encontrada, usando a primeira aba disponível: '{aba.title}'")
-
-        # IMPORTANTE: restringimos a busca só à aba desejada (ranges) e só
-        # aos campos que realmente usamos (fields). Sem isso, o Google
-        # Sheets devolve a formatação completa de TODAS as abas da
-        # planilha inteira, o que estoura a memória do servidor (Render
-        # free tem só 512MB) em planilhas grandes.
-        fmt = aba.spreadsheet.fetch_sheet_metadata({
-            "ranges": [aba.title],
-            "includeGridData": True,
-            "fields": "sheets.properties.title,sheets.data.rowData.values.formattedValue,sheets.data.rowData.values.effectiveFormat.backgroundColor",
-        })
-        sheet_data = [s for s in fmt['sheets'] if s['properties']['title'] == aba.title][0]
-        rows_data = sheet_data['data'][0].get('rowData', [])
-        print(f"{DEBUG_TAG} {len(rows_data)} linhas baixadas da planilha.")
+        rows_data, titulo_aba_usada = _obter_rows_data(url_planilha, nome_aba)
+        print(f"{DEBUG_TAG} Aba usada: '{titulo_aba_usada}'. {len(rows_data)} linhas baixadas da planilha.")
 
         pacientes_encontrados = []
         registrados = set()
@@ -302,22 +456,8 @@ def inspecionar_cores(url_planilha, nome_aba):
     """
     print(f"{DEBUG_TAG} inspecionar_cores() iniciada. nome_aba={nome_aba}")
     try:
-        planilha = conectar_google_sheets(url_planilha)
-        try:
-            aba = planilha.worksheet(nome_aba)
-        except Exception:
-            aba = planilha.get_worksheet(0)
-            print(f"{DEBUG_TAG} Aba '{nome_aba}' não encontrada, usando a primeira: '{aba.title}'")
-
-        # Mesma restrição de processar_escala: só a aba certa, só os campos
-        # usados, pra não estourar a memória do servidor.
-        fmt = aba.spreadsheet.fetch_sheet_metadata({
-            "ranges": [aba.title],
-            "includeGridData": True,
-            "fields": "sheets.properties.title,sheets.data.rowData.values.formattedValue,sheets.data.rowData.values.effectiveFormat.backgroundColor",
-        })
-        sheet_data = [s for s in fmt['sheets'] if s['properties']['title'] == aba.title][0]
-        rows_data = sheet_data['data'][0].get('rowData', [])
+        rows_data, titulo_aba_usada = _obter_rows_data(url_planilha, nome_aba)
+        print(f"{DEBUG_TAG} Aba usada: '{titulo_aba_usada}'.")
 
         horarios_limpos = [_normalizar_horario(h) for h in HORARIOS_PADRAO]
         amostras = []
