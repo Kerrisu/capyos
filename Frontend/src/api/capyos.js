@@ -38,7 +38,7 @@ export function formatarEscala({ mapa, naoAlocados }) {
 // existir e permitir persistir isso no banco, igual url_planilha vai
 // passar a ter fallback. Ver Handoff #10, "Achado extra".
 const URL_VACANCIA_TEMP =
-  "https://docs.google.com/spreadsheets/d/1hbIx7aMYFWP7_PNaCXJFYVrupzQnQdXp";
+  "https://docs.google.com/spreadsheets/d/1dANk0jQEpZ4Ek9mP5WwEMpALBxkCCIRxujwMnSJTNJo";
 
 // Escreve o mapa de alocação direto na aba do dia correspondente da
 // planilha de Vacância (Ponto 3). Substitui o fluxo antigo de "copiar
