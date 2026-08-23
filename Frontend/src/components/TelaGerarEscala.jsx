@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import MinecraftButton from "./MinecraftButton";
 import MinecraftPanel from "./MinecraftPanel";
-import { getAbas, gerarEscala, formatarEscala } from "../api/capyos";
+import { getAbas, gerarEscala, formatarEscala, escreverVacancia } from "../api/capyos";
 
 const DEBUG_TAG = "🔧[CAPYOS-FRONTEND-DEBUG]";
 
@@ -192,6 +192,11 @@ export default function TelaGerarEscala({ onVoltar }) {
   const [textoFinal, setTextoFinal] = useState("");
   const [copiado, setCopiado] = useState(false);
 
+  // --- Estado da escrita direta na Vacância (Ponto 3) ---
+  // "idle" -> "escrevendo" -> "sucesso" (volta a "idle" sozinho) ou "erro"
+  const [statusEscrita, setStatusEscrita] = useState("idle");
+  const [erroEscrita, setErroEscrita] = useState("");
+
   // PointerSensor com distância mínima evita que um clique simples vire
   // drag sem querer. TouchSensor com delay evita brigar com o scroll no
   // celular (segura um pouco antes de começar a arrastar).
@@ -249,10 +254,14 @@ export default function TelaGerarEscala({ onVoltar }) {
       .then((data) => {
         console.log(`${DEBUG_TAG} Escala gerada. Total processados: ${data.total_pacientes_processados}`);
         setResultado(data);
+        // mapaAtual precisa ficar disponível mesmo quando ninguém sobrou
+        // sem sala, porque /escrever-vacancia usa esse mapa (não o texto
+        // formatado) — sem isso o botão de escrever ficaria sem dado pra
+        // mandar nesse caso.
+        setMapaAtual(clonarMapa(data.mapa));
 
         if (data.nao_alocados && data.nao_alocados.length > 0) {
           console.log(`${DEBUG_TAG} ${data.nao_alocados.length} paciente(s) sem sala. Iniciando alocação manual...`);
-          setMapaAtual(clonarMapa(data.mapa));
           setNaoAlocadosFinal([...data.nao_alocados]);
           setFilaRestante([...data.nao_alocados]);
           setEstado("resolvendo-conflitos");
@@ -275,6 +284,8 @@ export default function TelaGerarEscala({ onVoltar }) {
     setFilaRestante([]);
     setTextoFinal("");
     setCopiado(false);
+    setStatusEscrita("idle");
+    setErroEscrita("");
     setEstado("pronto");
   }
 
@@ -345,6 +356,29 @@ export default function TelaGerarEscala({ onVoltar }) {
     } catch (e) {
       console.error(`${DEBUG_TAG} Erro ao copiar pra área de transferência:`, e);
       setErro("Não consegui copiar automaticamente. Selecione o texto manualmente.");
+    }
+  }
+
+  // Escreve o mapa direto na aba do dia na planilha de Vacância (Ponto 3).
+  // Usa mapaAtual (não o texto formatado) — é o mesmo mapa que já reflete
+  // qualquer ajuste manual feito na fase de alocação de pendências.
+  async function handleEscrever() {
+    if (!mapaAtual || !abaSelecionada) return;
+    console.log(`${DEBUG_TAG} Escrevendo na Vacância: aba=${abaSelecionada}`);
+    setStatusEscrita("escrevendo");
+    setErroEscrita("");
+
+    try {
+      const data = await escreverVacancia({ mapa: mapaAtual, nomeAba: abaSelecionada });
+      console.log(
+        `${DEBUG_TAG} Vacância escrita: ${data.celulas_escritas} células em '${data.aba_atualizada}'.`
+      );
+      setStatusEscrita("sucesso");
+      setTimeout(() => setStatusEscrita("idle"), 3000);
+    } catch (e) {
+      console.error(`${DEBUG_TAG} Erro ao escrever na Vacância:`, e);
+      setErroEscrita(e.message);
+      setStatusEscrita("erro");
     }
   }
 
@@ -543,8 +577,25 @@ export default function TelaGerarEscala({ onVoltar }) {
               {textoFinal}
             </div>
 
+            <MinecraftButton
+              onClick={handleEscrever}
+              disabled={statusEscrita === "escrevendo" || !mapaAtual}
+            >
+              {statusEscrita === "escrevendo"
+                ? "Escrevendo na Vacância..."
+                : statusEscrita === "sucesso"
+                ? "✅ Vacância atualizada!"
+                : "Escrever na Vacância"}
+            </MinecraftButton>
+
+            {statusEscrita === "erro" && (
+              <p style={{ fontSize: 14, color: "#8B0000", textAlign: "center", margin: "4px 0 10px" }}>
+                🔴 {erroEscrita}
+              </p>
+            )}
+
             <MinecraftButton onClick={handleCopiar}>
-              {copiado ? "✅ Vacância copiada!" : "Copiar Vacância"}
+              {copiado ? "✅ Texto copiado!" : "Copiar texto (WhatsApp)"}
             </MinecraftButton>
 
             <MinecraftButton onClick={onVoltar}>Voltar ao início</MinecraftButton>
