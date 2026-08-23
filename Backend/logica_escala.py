@@ -132,6 +132,33 @@ def _hex_para_rgb_float(hex_cor):
         return (1.0, 1.0, 1.0)
 
 
+def _mapa_valores_mesclados(aba):
+    """
+    openpyxl só preenche o valor da célula ÂNCORA (canto superior-esquerdo)
+    de um intervalo mesclado — as outras células do merge vêm como None
+    (viram MergedCell). O Google Sheets API, em contraste, replica o valor
+    em TODAS as células do merge.
+
+    Isso importa MUITO pro Direcionamento real: os nomes de profissional
+    (ex: "JORGE", usado pela Regra do Jorge) costumam estar mesclados sobre
+    várias colunas de sala. Sem essa correção, só a primeira coluna do
+    bloco pegava o nome — por isso só uma fração dos assistidos do Jorge
+    estava indo pra ABA 04 (confirmado com o Ken em 24/08).
+
+    Devolve um dict {(linha, coluna): valor_da_ancora} pra toda célula
+    mesclada que NÃO é a própria âncora.
+    """
+    mapa = {}
+    for intervalo in aba.merged_cells.ranges:
+        valor_ancora = aba.cell(row=intervalo.min_row, column=intervalo.min_col).value
+        for r in range(intervalo.min_row, intervalo.max_row + 1):
+            for c in range(intervalo.min_col, intervalo.max_col + 1):
+                if (r, c) == (intervalo.min_row, intervalo.min_col):
+                    continue
+                mapa[(r, c)] = valor_ancora
+    return mapa
+
+
 def _construir_rows_data_de_xlsx(conteudo_bytes, nome_aba):
     """
     Lê um .xlsx cru (bytes, baixado direto da Drive API) com openpyxl e
@@ -153,11 +180,16 @@ def _construir_rows_data_de_xlsx(conteudo_bytes, nome_aba):
         aba = workbook.worksheets[0]
         print(f"{DEBUG_TAG} Aba '{nome_aba}' não encontrada no .xlsx, usando a primeira disponível: '{aba.title}'")
 
+    mapa_merge = _mapa_valores_mesclados(aba)
+    if mapa_merge:
+        print(f"{DEBUG_TAG} {len(mapa_merge)} células mescladas detectadas, propagando valor da âncora.")
+
     rows_data = []
     for row in aba.iter_rows():
         values = []
         for cell in row:
-            valor = "" if cell.value is None else str(cell.value)
+            valor_bruto = mapa_merge.get((cell.row, cell.column), cell.value)
+            valor = "" if valor_bruto is None else str(valor_bruto)
 
             r, g, b = (1.0, 1.0, 1.0)
             fill = cell.fill
@@ -388,6 +420,13 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
                         if j == 0:
                             continue
                         nome_prof = cell.get('formattedValue', '').strip()
+                        # Remove sufixo tipo "(AP FORMADO)"/"(AP FORMADA)" do
+                        # nome do profissional — mesmo tratamento que já se
+                        # dá ao nome do assistido, senão a Regra do Jorge
+                        # (e qualquer regra futura de aplicador formado)
+                        # nunca bate com o texto real da planilha (confirmado
+                        # com o Ken em 24/08: "JORGE AUGUSTO (AP FORMADO)").
+                        nome_prof = _remover_sufixo_parenteses(nome_prof)
                         if nome_prof:
                             novo_mapa[j] = nome_prof
                 if novo_mapa:
@@ -680,7 +719,12 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
         # banco — o texto final que ia pro WhatsApp continuava mostrando
         # o erro de digitação (ex: "LUCCA CALVACANTI" em vez de "LUCCA
         # CAVALCANTI"), como confirmado num teste real em produção.
-        if p.get("profissional") and _normalizar(p["profissional"]) == "JORGE":
+        # CORRIGIDO (Handoff #10): usa .startswith() em vez de == exato.
+        # O cabeçalho de profissional no Direcionamento real é o nome
+        # completo ("JORGE AUGUSTO"), não só o primeiro nome — igualdade
+        # exata contra "JORGE" nunca batia, então a regra nunca disparava
+        # de verdade em produção (confirmado com o Ken em 24/08).
+        if p.get("profissional") and _normalizar(p["profissional"]).startswith("JORGE"):
             conteudo_atual_aba04 = mapa_final["ABA 04"][horario]
             if not conteudo_atual_aba04:
                 mapa_final["ABA 04"][horario] = nome
