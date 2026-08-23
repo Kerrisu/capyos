@@ -10,7 +10,7 @@ pacientes sem sala no frontend.
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 from dotenv import load_dotenv
 import os
@@ -273,6 +273,60 @@ def formatar_escala(request: FormatarEscalaRequest):
     texto_formatado = logica_escala.formatar_mapa_para_texto(request.mapa, request.nao_alocados)
 
     return FormatarEscalaResponse(texto_formatado=texto_formatado)
+
+
+class EscreverVacanciaRequest(BaseModel):
+    """
+    mapa: mesmo formato de GerarEscalaResponse.mapa (sala -> horario -> nome),
+    já com qualquer ajuste manual que o coordenador tenha feito na tela de
+    alocação — escrevemos exatamente o que veio, sem recalcular nada aqui.
+
+    url_vacancia: OBRIGATÓRIO por enquanto. Ainda não existe uma tela pra
+    salvar isso na configuração do banco (mesma limitação que afeta o
+    Ponto 4 — configuracoes_gerais só tem leitura hoje), então o frontend
+    precisa mandar a URL certa em toda chamada. Quando o Ponto 4.4 existir,
+    isso pode virar Optional com fallback pro banco, igual url_planilha.
+    """
+    mapa: Dict[str, Dict[str, str]]
+    nome_aba: str
+    url_vacancia: str
+
+
+class EscreverVacanciaResponse(BaseModel):
+    sucesso: bool
+    aba_atualizada: str
+    celulas_escritas: int
+
+
+@app.post("/escrever-vacancia", response_model=EscreverVacanciaResponse)
+def escrever_vacancia_rota(request: EscreverVacanciaRequest):
+    """
+    Escreve o mapa de alocação (já gerado por /gerar-escala, possivelmente
+    ajustado manualmente pelo coordenador na tela de alocação) direto na
+    aba do dia correspondente da planilha de Vacância — substitui o fluxo
+    antigo de "Copiar Vacância", que só copiava texto pra área de
+    transferência.
+    """
+    print(f"{DEBUG_TAG} Rota /escrever-vacancia chamada. aba={request.nome_aba}")
+
+    try:
+        celulas_escritas = logica_escala.escrever_vacancia(
+            request.url_vacancia, request.nome_aba, request.mapa
+        )
+    except ValueError as e:
+        print(f"{DEBUG_TAG} ERRO em /escrever-vacancia (aba não encontrada): {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(f"{DEBUG_TAG} ERRO em /escrever-vacancia: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao escrever na Vacância: {str(e)}")
+
+    print(f"{DEBUG_TAG} /escrever-vacancia concluída. {celulas_escritas} células escritas em '{request.nome_aba}'.")
+
+    return EscreverVacanciaResponse(
+        sucesso=True,
+        aba_atualizada=request.nome_aba,
+        celulas_escritas=celulas_escritas,
+    )
 
 
 # --- ROTAS DE GERENCIAMENTO DE PACIENTES ---

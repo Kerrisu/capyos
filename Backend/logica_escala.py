@@ -787,6 +787,70 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
 
 # --- FORMATAÇÃO PARA TEXTO FINAL ---
 
+# --- ESCRITA DIRETA NA PLANILHA DE VACÂNCIA (Ponto 3) ---
+
+# Mesma ordem de horário usada em distribuir_salas_ia() / formatar_mapa_para_texto(),
+# sem o sufixo "H" (o "H" só existe no rótulo visual da coluna A da Vacância).
+HORARIOS_VACANCIA = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"]
+
+
+def _coluna_sala_vacancia(indice_sala):
+    """Sala 1 = coluna B, Sala 2 = C, ..., Sala 13 = N."""
+    from openpyxl.utils import get_column_letter
+    return get_column_letter(1 + indice_sala)
+
+
+def escrever_vacancia(url_vacancia, nome_aba, mapa_final):
+    """
+    Escreve o mapa de alocação (mesmo formato de distribuir_salas_ia():
+    "ABA 01".."ABA 13" -> horário -> nome) na aba do dia correspondente da
+    planilha de Vacância, via Sheets API (values_update, uma chamada só).
+
+    Mexe SÓ nas 13 colunas de sala normal (B até N, "Sala 1".."Sala 13").
+    As colunas de Musicoterapia com Tatames / Caixa de Areia / Mercado da
+    Inclusão ficam de fora por enquanto — dependem do Ponto 4 (ainda não
+    implementado), que vai definir como esses destinos entram no mapa.
+
+    Unidade de trabalho: só a aba `nome_aba` é tocada, nunca as outras —
+    1:1 com o dia selecionado na leitura do Direcionamento (Ponto 1).
+
+    Sem log e sem backup antes de escrever — decisão explícita do Ken pra
+    manter essa primeira versão simples (ver handoff #9, Ponto 3).
+    """
+    print(f"{DEBUG_TAG} escrever_vacancia() iniciada. aba={nome_aba}")
+
+    planilha = conectar_google_sheets(url_vacancia)
+    try:
+        aba = planilha.worksheet(nome_aba)
+    except Exception:
+        raise ValueError(f"Aba '{nome_aba}' não encontrada na planilha de Vacância.")
+
+    valores = []
+    for horario in HORARIOS_VACANCIA:
+        linha = []
+        for n in range(1, 14):
+            sala_key = f"ABA {n:02d}"
+            nome = mapa_final.get(sala_key, {}).get(horario, "")
+            linha.append(nome)
+        valores.append(linha)
+
+    col_inicio = _coluna_sala_vacancia(1)   # B
+    col_fim = _coluna_sala_vacancia(13)     # N
+    linha_inicio = 3   # primeira linha de horário (13:15H)
+    linha_fim = 2 + len(HORARIOS_VACANCIA)  # última linha de horário (17:45H)
+    range_destino = f"{nome_aba}!{col_inicio}{linha_inicio}:{col_fim}{linha_fim}"
+
+    aba.spreadsheet.values_update(
+        range_destino,
+        params={"valueInputOption": "RAW"},
+        body={"values": valores},
+    )
+
+    total_celulas = len(valores) * len(valores[0]) if valores else 0
+    print(f"{DEBUG_TAG} Vacância atualizada: '{range_destino}' ({total_celulas} células).")
+    return total_celulas
+
+
 def formatar_mapa_para_texto(mapa_final, nao_alocados):
     """Transforma o dicionário de salas no texto final formatado para o usuário."""
     print(f"{DEBUG_TAG} formatar_mapa_para_texto() chamada.")
