@@ -267,6 +267,12 @@ def listar_abas(url_planilha):
 # (ex: o azul da PISCINA caía dentro da faixa de verde).
 COR_VERDE = (0.4, 1.0, 0.6)      # REFERÊNCIA
 COR_AMARELO = (1.0, 1.0, 0.4)    # SUPRIDA
+# Rosa claro: usado temporariamente pro time marcar REFERÊNCIA de assistidos
+# TRANSFERIDOS (confirmado com o Ken em 23/08). É a mesma categoria clínica
+# do verde, só com cor diferente por causa do processo de transferência —
+# a expectativa é que vire verde puro nos próximos dias, mas tratamos como
+# equivalente desde já pra não perder esses assistidos na alocação.
+COR_REFERENCIA_TRANSFERIDO = (1.0, 0.78, 0.808)
 TOLERANCIA_COR = 0.05
 
 
@@ -423,7 +429,7 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
                 g = cor_data.get('green', 0)
                 b = cor_data.get('blue', 0)
 
-                is_verde = _cor_bate(r, g, b, COR_VERDE)
+                is_verde = _cor_bate(r, g, b, COR_VERDE) or _cor_bate(r, g, b, COR_REFERENCIA_TRANSFERIDO)
                 is_amarelo = _cor_bate(r, g, b, COR_AMARELO)
 
                 if is_verde or is_amarelo:
@@ -490,7 +496,7 @@ def inspecionar_cores(url_planilha, nome_aba):
                 g = round(cor_data.get('green', 0), 3)
                 b = round(cor_data.get('blue', 0), 3)
 
-                veredito = "VERDE" if _cor_bate(r, g, b, COR_VERDE) else (
+                veredito = "VERDE" if (_cor_bate(r, g, b, COR_VERDE) or _cor_bate(r, g, b, COR_REFERENCIA_TRANSFERIDO)) else (
                     "AMARELO" if _cor_bate(r, g, b, COR_AMARELO) else "ignorado"
                 )
 
