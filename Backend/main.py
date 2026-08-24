@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 import os
 import logica_escala
 import database
-from models import GerarEscalaRequest, GerarEscalaResponse, PacienteUpsertRequest
+from models import GerarEscalaRequest, GerarEscalaResponse, PacienteUpsertRequest, ConfiguracoesGerais
 
 DEBUG_TAG = "🔧[CAPYOS-DEBUG]"
 
@@ -408,6 +408,48 @@ def remover_paciente(nome: str):
     print(f"{DEBUG_TAG} Paciente '{nome_normalizado}' removido com sucesso.")
 
     return {"mensagem": f"Assistido '{nome_normalizado}' removido com sucesso."}
+
+
+# --- CONFIGURAÇÕES GERAIS (Ponto 4.2) ---
+# Antes só existia obter_configuracoes_gerais() sendo lida internamente por
+# /gerar-escala e /abas. Essas duas rotas abrem isso pro frontend (tela do
+# Ponto 4.3) poder ler e editar sem precisar mexer direto no Neon via SQL.
+
+@app.get("/configuracoes-gerais", response_model=ConfiguracoesGerais)
+def obter_configuracoes_gerais_rota():
+    """
+    Devolve a linha única (id=1) de configuracoes_gerais. Se a linha ainda
+    não existir por algum motivo, devolve os defaults do modelo em vez de
+    erro — a tela de configurações sempre tem algo pra mostrar/editar.
+    """
+    print(f"{DEBUG_TAG} Rota GET /configuracoes-gerais chamada.")
+
+    try:
+        config = database.obter_configuracoes_gerais()
+    except database.ErroBancoDados as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return ConfiguracoesGerais(**config)
+
+
+@app.put("/configuracoes-gerais", response_model=ConfiguracoesGerais)
+def salvar_configuracoes_gerais_rota(request: ConfiguracoesGerais):
+    """
+    Substitui a linha inteira de configuracoes_gerais (id=1) pelo payload
+    recebido. Sempre manda o objeto completo — não é um patch parcial,
+    então o frontend precisa buscar (GET), editar em memória e mandar
+    tudo de volta (PUT), igual o resto do CapyOS já faz com pacientes.
+    """
+    print(f"{DEBUG_TAG} Rota PUT /configuracoes-gerais chamada.")
+
+    try:
+        database.salvar_configuracoes_gerais_db(request.model_dump())
+    except database.ErroBancoDados as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    print(f"{DEBUG_TAG} configuracoes_gerais salva com sucesso.")
+
+    return request
 
 
 if __name__ == "__main__":
