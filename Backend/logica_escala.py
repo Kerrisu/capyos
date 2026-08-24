@@ -636,6 +636,23 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     salas_terreo = regras_gerais.get("ordem_salas_terreo", [])
     bloqueadas = regras_gerais.get("salas_bloqueadas", [])
 
+    # ATUALIZADO (Ponto 4): antes só existia a "Regra do Jorge" hardcoded
+    # (assistidos dele sempre pra ABA 04). Agora é configurável na tela de
+    # Configurações Gerais (Ponto 4.3) — aplicadores_formados é um dict
+    # {prefixo do nome do profissional -> sala}. Se ninguém configurou
+    # nada ainda (banco com '{}'), cai no MESMO comportamento de sempre
+    # (só Jorge -> ABA 04), pra não quebrar produção silenciosamente no
+    # dia em que essa coluna passou a ser lida de verdade.
+    aplicadores_formados = regras_gerais.get("aplicadores_formados") or {"JORGE": "ABA 04"}
+
+    # NOVO (Ponto 4): salas com sala_fixa "de nicho" (Musicoterapia com
+    # Tatames, Caixa de Areia, Mercado da Inclusão...) que NÃO devem
+    # receber ninguém no preenchimento automático — só quem tem
+    # sala_fixa apontando pra elas. Diferente de `bloqueadas`: essas
+    # continuam em mapa_final e aceitam sala_fixa normalmente, só saem
+    # do pool usado nas Fases 1/2/3 de alocação automática mais abaixo.
+    fora_do_pool = regras_gerais.get("salas_fora_do_pool", [])
+
     # REMOVIDO ("no flow" - item 2): a lista fixa `ordem_salas_preferencial`
     # que existia aqui (ex: sempre tentar ABA 13, depois ABA 12, ABA 11...)
     # saiu de cena. A prioridade de sala agora não é mais uma ordem fixa —
@@ -663,8 +680,16 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     # A ordem entre salas do MESMO andar não importa pro resultado (Ken
     # confirmou) — ficou crescente só pra ser determinística e fácil de
     # depurar (rodar a mesma escala duas vezes dá o mesmo resultado).
-    salas_mezanino_ativas = sorted([s for s in salas_ativas if s not in salas_terreo], key=_numero_sala)
-    salas_terreo_ativas = sorted([s for s in salas_ativas if s in salas_terreo], key=_numero_sala)
+    #
+    # `fora_do_pool` exclui daqui (não de `salas_ativas`) — assim a sala
+    # continua existindo em mapa_final e aceitando sala_fixa (bloco logo
+    # abaixo), só não entra no preenchimento automático das Fases 1/2/3.
+    salas_mezanino_ativas = sorted(
+        [s for s in salas_ativas if s not in salas_terreo and s not in fora_do_pool], key=_numero_sala
+    )
+    salas_terreo_ativas = sorted(
+        [s for s in salas_ativas if s in salas_terreo and s not in fora_do_pool], key=_numero_sala
+    )
 
     horarios = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"]
     mapa_final = {sala: {h: "" for h in horarios} for sala in salas_ativas + bloqueadas}
@@ -711,8 +736,11 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
 
         sala_destinada = None
 
-        # --- REGRA DO JORGE: assistidos dele vão sempre pra ABA 04, ---
-        # --- ignorando bloqueio de sala e qualquer outra regra. ------
+        # --- APLICADORES FORMADOS: assistidos desses profissionais vão
+        # sempre pra sala configurada, ignorando bloqueio de sala e
+        # qualquer outra regra. Generaliza a antiga "Regra do Jorge"
+        # hardcoded (agora é só a entrada padrão de aplicadores_formados
+        # quando ninguém configurou nada, ver acima).
         # CORRIGIDO (Parte 2, item 3): usa `nome` (já corrigido pelo
         # apelidos) em vez de `nome_original` ao ESCREVER no mapa final.
         # Antes, o dicionário `apelidos` só corrigia a busca interna no
@@ -724,20 +752,35 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
         # completo ("JORGE AUGUSTO"), não só o primeiro nome — igualdade
         # exata contra "JORGE" nunca batia, então a regra nunca disparava
         # de verdade em produção (confirmado com o Ken em 24/08).
-        if p.get("profissional") and _normalizar(p["profissional"]).startswith("JORGE"):
-            conteudo_atual_aba04 = mapa_final["ABA 04"][horario]
-            if not conteudo_atual_aba04:
-                mapa_final["ABA 04"][horario] = nome
+        sala_aplicador_formado = None
+        if p.get("profissional"):
+            profissional_normalizado = _normalizar(p["profissional"])
+            for prefixo, sala_config in aplicadores_formados.items():
+                if profissional_normalizado.startswith(_normalizar(prefixo)):
+                    sala_aplicador_formado = sala_config
+                    break
+
+        if sala_aplicador_formado and sala_aplicador_formado in mapa_final:
+            conteudo_atual_aplicador = mapa_final[sala_aplicador_formado][horario]
+            if not conteudo_atual_aplicador:
+                mapa_final[sala_aplicador_formado][horario] = nome
             else:
-                ja_tem = nome in conteudo_atual_aba04
+                ja_tem = nome in conteudo_atual_aplicador
                 if not ja_tem:
-                    qtd_atual = len(conteudo_atual_aba04.split(" / "))
-                    mapa_final["ABA 04"][horario] = f"{conteudo_atual_aba04} / {nome}"
+                    qtd_atual = len(conteudo_atual_aplicador.split(" / "))
+                    mapa_final[sala_aplicador_formado][horario] = f"{conteudo_atual_aplicador} / {nome}"
                     if qtd_atual + 1 > 2:
-                        print(f"{DEBUG_TAG} AVISO: mais de 2 assistidos do Jorge na ABA 04 às {horario} — confira se está correto: {mapa_final['ABA 04'][horario]}")
-            sala_destinada = "ABA 04"
+                        print(f"{DEBUG_TAG} AVISO: mais de 2 assistidos de aplicador formado na {sala_aplicador_formado} às {horario} — confira se está correto: {mapa_final[sala_aplicador_formado][horario]}")
+            sala_destinada = sala_aplicador_formado
             pacientes_alocados_no_horario[horario].add(nome)
             continue
+        elif sala_aplicador_formado:
+            # Sala configurada em aplicadores_formados que não existe em
+            # mapa_final (ex: apagada de "Todas as salas" nas
+            # Configurações Gerais, mas o mapa profissional->sala não foi
+            # atualizado junto). Não trava a geração — só cai no fluxo
+            # normal de alocação, como se não tivesse regra nenhuma.
+            print(f"{DEBUG_TAG} AVISO: aplicador formado configurado pra sala '{sala_aplicador_formado}', que não existe mais em 'todas_as_salas'. '{nome}' vai seguir o fluxo normal de alocação.")
 
         sf = info.get("sala_fixa")
         if sf and sf in mapa_final and sf not in bloqueadas:
