@@ -74,3 +74,17 @@ export function removerPaciente(nome) {
     method: "DELETE",
   });
 }
+
+export function obterConfiguracoesGerais() {
+  return apiFetch("/configuracoes-gerais");
+}
+
+// Sempre manda o objeto completo — o PUT não é um patch parcial (mesmo
+// padrão que o resto do CapyOS usa pra pacientes: busca, edita em
+// memória, manda tudo de volta).
+export function salvarConfiguracoesGerais(config) {
+  return apiFetch("/configuracoes-gerais", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+}
