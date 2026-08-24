@@ -320,9 +320,13 @@ export default function TelaConfiguracoes({ onVoltar }) {
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), adicionarSala())}
                 disabled={estado === "salvando"}
                 placeholder="Ex: ABA 14, MUSICOTERAPIA COM TATAMES..."
-                style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
               />
-              <MinecraftButton onClick={adicionarSala} disabled={estado === "salvando"}>
+              <MinecraftButton
+                onClick={adicionarSala}
+                disabled={estado === "salvando"}
+                style={{ width: "auto", flexShrink: 0, marginBottom: 0, whiteSpace: "nowrap" }}
+              >
                 + Add
               </MinecraftButton>
             </div>
@@ -410,7 +414,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
                 onChange={(e) => setNovoAplicadorNome(e.target.value)}
                 disabled={estado === "salvando"}
                 placeholder="Nome do profissional"
-                style={{ ...inputStyle, marginBottom: 0, flex: 1 }}
+                style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
               />
               <select
                 value={novoAplicadorSala}
@@ -428,6 +432,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
               <MinecraftButton
                 onClick={adicionarAplicador}
                 disabled={estado === "salvando" || !novoAplicadorNome.trim() || !novoAplicadorSala}
+                style={{ width: "auto", flexShrink: 0, marginBottom: 0, whiteSpace: "nowrap" }}
               >
                 + Add
               </MinecraftButton>
