@@ -4,6 +4,7 @@ import MinecraftPanel from "./components/MinecraftPanel";
 import Capybara from "./components/Capybara";
 import TelaGerarEscala from "./components/TelaGerarEscala";
 import TelaPacientes from "./components/TelaPacientes";
+import TelaConfiguracoes from "./components/TelaConfiguracoes";
 import TelaLoading from "./components/TelaLoading";
 import "./styles/theme.css";
 
@@ -18,7 +19,7 @@ export default function App() {
   // redundante — não existe mais "statusBackend" nem o ping repetido de
   // /health depois do carregamento inicial.
   const [carregando, setCarregando] = useState(true);
-  const [tela, setTela] = useState("home"); // home | gerar-escala | pacientes
+  const [tela, setTela] = useState("home"); // home | gerar-escala | pacientes | configuracoes
 
   if (carregando) {
     return <TelaLoading onPronto={() => setCarregando(false)} />;
@@ -52,11 +53,15 @@ export default function App() {
             <MinecraftButton onClick={() => setTela("pacientes")}>
               Gerenciar Assistidos
             </MinecraftButton>
+            <MinecraftButton onClick={() => setTela("configuracoes")}>
+              Configurações Gerais
+            </MinecraftButton>
           </MinecraftPanel>
         </div>
       )}
       {tela === "gerar-escala" && <TelaGerarEscala onVoltar={() => setTela("home")} />}
       {tela === "pacientes" && <TelaPacientes onVoltar={() => setTela("home")} />}
+      {tela === "configuracoes" && <TelaConfiguracoes onVoltar={() => setTela("home")} />}
     </div>
   );
 }
