@@ -227,7 +227,8 @@ def gerar_escala(request: GerarEscalaRequest):
     print(f"{DEBUG_TAG} {len(resultado)} pacientes identificados na planilha (verde/amarelo).")
 
     mapa_final, nao_alocados = logica_escala.distribuir_salas_ia(resultado, config)
-    texto_formatado = logica_escala.formatar_mapa_para_texto(mapa_final, nao_alocados)
+    salas_bloqueadas = config.get("configuracoes_gerais", {}).get("salas_bloqueadas", [])
+    texto_formatado = logica_escala.formatar_mapa_para_texto(mapa_final, nao_alocados, salas_bloqueadas)
 
     print(f"{DEBUG_TAG} /gerar-escala concluída com sucesso. {len(nao_alocados)} pacientes sem sala.")
 
@@ -270,7 +271,14 @@ def formatar_escala(request: FormatarEscalaRequest):
     """
     print(f"{DEBUG_TAG} Rota /formatar-escala chamada. {len(request.nao_alocados)} pacientes sem sala.")
 
-    texto_formatado = logica_escala.formatar_mapa_para_texto(request.mapa, request.nao_alocados)
+    try:
+        config = database.obter_configuracoes_gerais()
+    except database.ErroBancoDados as e:
+        print(f"{DEBUG_TAG} ERRO ao consultar banco: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    salas_bloqueadas = config.get("salas_bloqueadas", [])
+    texto_formatado = logica_escala.formatar_mapa_para_texto(request.mapa, request.nao_alocados, salas_bloqueadas)
 
     return FormatarEscalaResponse(texto_formatado=texto_formatado)
 

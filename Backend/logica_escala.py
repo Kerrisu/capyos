@@ -325,6 +325,21 @@ def _normalizar(texto):
     return "".join(c for c in nfkd if not unicodedata.combining(c)).upper().strip()
 
 
+def _numero_sala(nome_sala):
+    """
+    Extrai o número da sala pra ordenação (ex: 'ABA 09' -> 9). Salas sem
+    número no nome (ex: uma sala especial cadastrada em "Todas as salas"
+    nas Configurações Gerais, tipo "MUSICOTERAPIA COM TATAMES" ou
+    "TÉRREO") caem no fallback 0 em vez de quebrar — sem isso, qualquer
+    sala com nome livre derrubava a geração inteira da escala com
+    ValueError (bug real, visto em produção em 24/08).
+    """
+    try:
+        return int(nome_sala.split()[1])
+    except (IndexError, ValueError):
+        return 0
+
+
 def _normalizar_horario(texto):
     """
     Normaliza texto de horário pra comparação: maiúsculo, sem 'H' e sem
@@ -669,12 +684,8 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     todas_as_salas_config = regras_gerais.get("todas_as_salas", TODAS_AS_SALAS)
     salas_ativas = [s for s in todas_as_salas_config if s not in bloqueadas]
 
-    def _numero_sala(nome_sala):
-        """Extrai o número da sala pra ordenação (ex: 'ABA 09' -> 9)."""
-        try:
-            return int(nome_sala.split()[1])
-        except (IndexError, ValueError):
-            return 0
+    # _numero_sala agora é função de módulo (usada também por
+    # formatar_mapa_para_texto) — ver definição perto de _normalizar.
 
     # Salas ativas separadas por andar, em ordem crescente de número.
     # A ordem entre salas do MESMO andar não importa pro resultado (Ken
@@ -938,17 +949,28 @@ def escrever_vacancia(url_vacancia, nome_aba, mapa_final):
     return total_celulas
 
 
-def formatar_mapa_para_texto(mapa_final, nao_alocados):
-    """Transforma o dicionário de salas no texto final formatado para o usuário."""
+def formatar_mapa_para_texto(mapa_final, nao_alocados, salas_bloqueadas=None):
+    """
+    Transforma o dicionário de salas no texto final formatado para o usuário.
+
+    salas_bloqueadas: lista de nomes de sala vindas de configuracoes_gerais
+    (Ponto 4.3). Antes disso existir, a função ADIVINHAVA quais salas eram
+    "normalmente bloqueadas" checando se "04" ou "06" apareciam no nome —
+    o que (a) nunca refletia o bloqueio configurado de verdade e (b) dava
+    falso positivo em qualquer sala especial cujo nome contivesse esses
+    dígitos por acaso. Se não vier nada aqui, assume lista vazia (nenhuma
+    sala mostra o ícone de bloqueada) em vez de manter o chute antigo.
+    """
     print(f"{DEBUG_TAG} formatar_mapa_para_texto() chamada.")
+    salas_bloqueadas = salas_bloqueadas or []
     texto = "📌*Deem prioridade aos menores estar no MEZANINO. As ABAS de baixo são prioritárias dos assistidos com resistências as escadas!*\n\n"
     texto += "*VACÂNCIA DIÁRIA*✨💚\n\n"
 
     horarios = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"]
-    salas_ordenadas = sorted(mapa_final.keys(), key=lambda x: int(x.split()[1]))
+    salas_ordenadas = sorted(mapa_final.keys(), key=_numero_sala)
 
     for sala in salas_ordenadas:
-        eh_normalmente_bloqueada = "04" in sala or "06" in sala
+        eh_normalmente_bloqueada = sala in salas_bloqueadas
         tem_ocupante = any(mapa_final[sala].get(h) for h in horarios)
 
         if eh_normalmente_bloqueada and not tem_ocupante:
