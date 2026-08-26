@@ -687,19 +687,37 @@ def distribuir_salas_ia(lista_pacientes, configuracoes):
     # _numero_sala agora é função de módulo (usada também por
     # formatar_mapa_para_texto) — ver definição perto de _normalizar.
 
+    # BUG REAL visto em produção em 24/08: com o bloqueio virando
+    # configurável (Ponto 4), a ABA 04 (sala do Jorge) deixou de estar
+    # SEMPRE em `bloqueadas` — e assim que saiu de lá, passou a competir
+    # no pool automático igual qualquer sala normal. Resultado: o
+    # algoritmo escrevia o assistido do Jorge lá (via bloco de aplicador
+    # formado, mais abaixo, que sempre ignorou bloqueio de propósito), e
+    # depois a Fase 2 (dividir sala) via aquela sala como "com 1 vaga
+    # sobrando" e colocava OUTRO assistido qualquer junto — mesmo sem
+    # nenhuma relação com o Jorge.
+    #
+    # Sala de aplicador formado precisa ficar fora do pool automático
+    # SEMPRE, sem depender de alguém lembrar de configurar isso também em
+    # salas_bloqueadas ou salas_fora_do_pool — daqui pra frente isso é
+    # automático, calculado a partir dos valores de aplicadores_formados.
+    salas_de_aplicadores_formados = set(aplicadores_formados.values())
+    fora_do_pool_efetivo = set(fora_do_pool) | salas_de_aplicadores_formados
+
     # Salas ativas separadas por andar, em ordem crescente de número.
     # A ordem entre salas do MESMO andar não importa pro resultado (Ken
     # confirmou) — ficou crescente só pra ser determinística e fácil de
     # depurar (rodar a mesma escala duas vezes dá o mesmo resultado).
     #
-    # `fora_do_pool` exclui daqui (não de `salas_ativas`) — assim a sala
-    # continua existindo em mapa_final e aceitando sala_fixa (bloco logo
-    # abaixo), só não entra no preenchimento automático das Fases 1/2/3.
+    # `fora_do_pool_efetivo` exclui daqui (não de `salas_ativas`) — assim
+    # a sala continua existindo em mapa_final e aceitando sala_fixa/
+    # aplicador formado (blocos logo abaixo), só não entra no
+    # preenchimento automático das Fases 1/2/3.
     salas_mezanino_ativas = sorted(
-        [s for s in salas_ativas if s not in salas_terreo and s not in fora_do_pool], key=_numero_sala
+        [s for s in salas_ativas if s not in salas_terreo and s not in fora_do_pool_efetivo], key=_numero_sala
     )
     salas_terreo_ativas = sorted(
-        [s for s in salas_ativas if s in salas_terreo and s not in fora_do_pool], key=_numero_sala
+        [s for s in salas_ativas if s in salas_terreo and s not in fora_do_pool_efetivo], key=_numero_sala
     )
 
     horarios = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"]
