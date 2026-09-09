@@ -302,3 +302,75 @@ def carregar_config_completo():
         "configuracoes_gerais": obter_configuracoes_gerais(),
         "pacientes": listar_pacientes_dict(),
     }
+
+
+def buscar_usuario_por_login(login: str):
+    """Busca o usuário pelo login para validar a senha e gerar o token no main.py."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                SELECT id, nome, login, senha_hash, papel
+                FROM usuarios
+                WHERE login = %s;
+            """, (login,))
+            linha = cur.fetchone()
+        return dict(linha) if linha else None
+    finally:
+        conn.close()
+
+
+def listar_pendencias_db(nome_usuario: str, papel: str):
+    """
+    Retorna as pendências do banco.
+    Se coordenação, retorna todas. Se aplicador, retorna apenas as atreladas ao seu nome.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            if papel == "coordenacao":
+                cur.execute("""
+                    SELECT id, data, dia_semana, horario, tita, aplicador, feito, observacao
+                    FROM pendencias
+                    ORDER BY data ASC, horario ASC;
+                """)
+            else:
+                cur.execute("""
+                    SELECT id, data, dia_semana, horario, tita, aplicador, feito, observacao
+                    FROM pendencias
+                    WHERE aplicador = %s
+                    ORDER BY data ASC, horario ASC;
+                """, (nome_usuario,))
+            linhas = cur.fetchall()
+        return [dict(linha) for linha in linhas]
+    finally:
+        conn.close()
+
+
+def marcar_pendencia_como_feita(id_pendencia: int, feito: bool, nome_usuario: str, papel: str):
+    """
+    Atualiza o status (✅) de uma pendência.
+    Trava de segurança: aplicador só consegue alterar a própria pendência.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if papel == "coordenacao":
+                # Coordenação tem poder absoluto para alterar qualquer linha
+                cur.execute("""
+                    UPDATE pendencias
+                    SET feito = %s
+                    WHERE id = %s;
+                """, (feito, id_pendencia))
+            else:
+                # Aplicador só consegue dar UPDATE se a linha pertencer a ele
+                cur.execute("""
+                    UPDATE pendencias
+                    SET feito = %s
+                    WHERE id = %s AND aplicador = %s;
+                """, (feito, id_pendencia, nome_usuario))
+            linhas_afetadas = cur.rowcount
+        conn.commit()
+        return linhas_afetadas > 0
+    finally:
+        conn.close()
