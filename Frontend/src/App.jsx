@@ -6,18 +6,21 @@ import TelaGerarEscala from "./components/TelaGerarEscala";
 import TelaPacientes from "./components/TelaPacientes";
 import TelaConfiguracoes from "./components/TelaConfiguracoes";
 import TelaLoading from "./components/TelaLoading";
+import AppAplicadores from "./components/AppAplicadores"; // <--- 1. IMPORT NOVO AQUI
 import "./styles/theme.css";
 
 export default function App() {
-  // Enquanto "carregando" for true, a TelaLoading fica pingando /health e
-  // segura a renderização do resto do app — assim o Ken não vê a tela
-  // "verificando conexão" piscando junto com o conteúdo normal.
-  //
-  // Removido (Parte 2): o indicador 🟢/🔴 de status do backend que ficava
-  // aqui embaixo do título. A TelaLoading já garante que o backend
-  // respondeu antes de chegar nessa tela, então o indicador era
-  // redundante — não existe mais "statusBackend" nem o ping repetido de
-  // /health depois do carregamento inicial.
+  // =========================================================================
+  // 2. VERIFICAÇÃO DA URL (ROTA SIMPLES)
+  // Se acessar /aplicador, exibe a tela nova e para a execução por aqui.
+  // =========================================================================
+  if (window.location.pathname === "/aplicador" || window.location.pathname.startsWith("/aplicador/")) {
+    return <AppAplicadores />;
+  }
+
+  // =========================================================================
+  // O RESTO DO SEU CÓDIGO CONTINUA EXATAMENTE IGUAL PARA OS AUXILIARES
+  // =========================================================================
   const [carregando, setCarregando] = useState(true);
   const [tela, setTela] = useState("home"); // home | gerar-escala | pacientes | configuracoes
 
