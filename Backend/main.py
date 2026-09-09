@@ -489,15 +489,8 @@ def login_rota(request: LoginRequest):
     """Rota que recebe login e senha, verifica no banco e devolve o Token."""
     print(f"{DEBUG_TAG} Tentativa de login para: {request.login}")
     
-    # Aqui você vai substituir pela chamada real do seu database.py
-    # Exemplo: usuario_db = database.buscar_usuario_por_login(request.login)
-    
-    # MOCK (Remova isso quando conectar a função buscar_usuario_por_login no database.py)
-    usuario_db = None
-    if request.login == "kennendy":
-        usuario_db = {"login": "kennendy", "senha_hash": pwd_context.hash("senha123"), "nome": "Kennendy Brito", "papel": "aplicador"}
-    elif request.login == "coord":
-        usuario_db = {"login": "coord", "senha_hash": pwd_context.hash("admin123"), "nome": "Coordenação", "papel": "coordenacao"}
+    # Chama a função real do banco Neon
+    usuario_db = database.buscar_usuario_por_login(request.login)
         
     if not usuario_db:
         raise HTTPException(status_code=401, detail="Usuário não encontrado.")
@@ -512,7 +505,7 @@ def login_rota(request: LoginRequest):
         "sub": usuario_db["login"],
         "nome": usuario_db["nome"],
         "papel": usuario_db["papel"],
-        "exp": expiracao
+        "exp": expiracao.timestamp()
     }
     
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
@@ -527,23 +520,24 @@ def listar_pendencias(usuario: dict = Depends(obter_usuario_logado)):
     
     print(f"{DEBUG_TAG} /pendencias solicitada por {nome_usuario} (Papel: {papel})")
     
-    # Aqui vai a chamada pro seu database.py para buscar as pendências
-    # Se papel == 'aplicador', filtra no SQL: WHERE aplicador = nome_usuario
-    # Se papel == 'coordenacao', SELECT * FROM pendencias
+    # Chama a função real do banco Neon
+    pendencias_db = database.listar_pendencias_db(nome_usuario, papel)
     
-    # MOCK de retorno
-    return []
-
+    return pendencias_db
 
 @app.patch("/pendencias/{id_pendencia}")
 def atualizar_pendencia(id_pendencia: int, request: PendenciaUpdateRequest, usuario: dict = Depends(obter_usuario_logado)):
     """Marca uma pendência como feita (✅)"""
     papel = usuario.get("papel")
+    nome_usuario = usuario.get("nome")
     
-    # Lógica de segurança: aplicador só pode alterar o que é dele (você valida isso no SQL/database)
-    # database.marcar_pendencia_como_feita(id_pendencia, request.feito, usuario.get("nome"), papel)
+    # Chama a função real do banco Neon com a trava de segurança
+    sucesso = database.marcar_pendencia_como_feita(id_pendencia, request.feito, nome_usuario, papel)
     
-    print(f"{DEBUG_TAG} Pendência {id_pendencia} alterada para {request.feito} por {usuario.get('nome')}")
+    if not sucesso:
+        raise HTTPException(status_code=403, detail="Não autorizado a alterar esta pendência ou pendência não encontrada.")
+    
+    print(f"{DEBUG_TAG} Pendência {id_pendencia} alterada para {request.feito} por {nome_usuario}")
     return {"mensagem": "Status atualizado com sucesso", "feito": request.feito}
 
 if __name__ == "__main__":
