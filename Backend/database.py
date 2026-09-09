@@ -56,6 +56,32 @@ def criar_tabelas():
     Cria as tabelas se ainda não existirem. Roda automaticamente no startup
     do FastAPI (ver main.py) — seguro rodar toda vez, não duplica nada.
     """
+    # Adicione isso dentro da sua função criar_tabelas() no database.py
+    
+    comando_sql_usuarios = """
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        login VARCHAR(100) UNIQUE NOT NULL,
+        senha_hash VARCHAR(255) NOT NULL,
+        papel VARCHAR(50) NOT NULL -- 'aplicador' ou 'coordenacao'
+    );
+    """
+    
+    comando_sql_pendencias = """
+    CREATE TABLE IF NOT EXISTS pendencias (
+        id SERIAL PRIMARY KEY,
+        data DATE NOT NULL,
+        dia_semana VARCHAR(20),
+        horario VARCHAR(10),
+        tita VARCHAR(255),
+        aplicador VARCHAR(255) NOT NULL,
+        feito BOOLEAN DEFAULT FALSE,
+        observacao TEXT
+    );
+    """
+    # Lembre-se de dar cursor.execute(comando_sql_usuarios) e cursor.execute(comando_sql_pendencias)
+  
     print(f"{DEBUG_TAG} Verificando/criando tabelas...")
     conn = get_connection()
     try:
