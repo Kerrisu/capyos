@@ -3,7 +3,7 @@
 // ==========================================
 
 import React, { useState, useEffect } from 'react';
-import './index.css';
+
 
 // URL do seu backend no Render (substitua pela sua URL real de produção quando publicar)
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
