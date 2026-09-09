@@ -17,6 +17,27 @@ import os
 import logica_escala
 import database
 from models import GerarEscalaRequest, GerarEscalaResponse, PacienteUpsertRequest, ConfiguracoesGerais
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
+from passlib.context import CryptContext
+import jwt
+from models import LoginRequest, TokenResponse, PendenciaResponse, PendenciaUpdateRequest
+
+# Configurações de Segurança e JWT
+SECRET_KEY = os.environ.get("JWT_SECRET", "capyos_super_secreta_2026") # Mude no Render depois
+ALGORITHM = "HS256"
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
+# Função auxiliar para verificar token (middleware de proteção)
+def obter_usuario_logado(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload # Retorna dicionário com {"login": "...", "papel": "...", "nome": "..."}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirou")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
 
 DEBUG_TAG = "🔧[CAPYOS-DEBUG]"
 
@@ -459,6 +480,71 @@ def salvar_configuracoes_gerais_rota(request: ConfiguracoesGerais):
 
     return request
 
+# ==========================================
+# NOVAS ROTAS: AUTENTICAÇÃO E PENDÊNCIAS
+# ==========================================
+
+@app.post("/login", response_model=TokenResponse)
+def login_rota(request: LoginRequest):
+    """Rota que recebe login e senha, verifica no banco e devolve o Token."""
+    print(f"{DEBUG_TAG} Tentativa de login para: {request.login}")
+    
+    # Aqui você vai substituir pela chamada real do seu database.py
+    # Exemplo: usuario_db = database.buscar_usuario_por_login(request.login)
+    
+    # MOCK (Remova isso quando conectar a função buscar_usuario_por_login no database.py)
+    usuario_db = None
+    if request.login == "kennendy":
+        usuario_db = {"login": "kennendy", "senha_hash": pwd_context.hash("senha123"), "nome": "Kennendy Brito", "papel": "aplicador"}
+    elif request.login == "coord":
+        usuario_db = {"login": "coord", "senha_hash": pwd_context.hash("admin123"), "nome": "Coordenação", "papel": "coordenacao"}
+        
+    if not usuario_db:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado.")
+        
+    # Verifica se a senha bate com o hash
+    if not pwd_context.verify(request.senha, usuario_db["senha_hash"]):
+        raise HTTPException(status_code=401, detail="Senha incorreta.")
+        
+    # Gera o Token JWT com validade de 24 horas
+    expiracao = datetime.utcnow() + timedelta(hours=24)
+    payload = {
+        "sub": usuario_db["login"],
+        "nome": usuario_db["nome"],
+        "papel": usuario_db["papel"],
+        "exp": expiracao
+    }
+    
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return TokenResponse(access_token=token, token_type="bearer", nome=usuario_db["nome"], papel=usuario_db["papel"])
+
+
+@app.get("/pendencias", response_model=List[PendenciaResponse])
+def listar_pendencias(usuario: dict = Depends(obter_usuario_logado)):
+    """Retorna pendências. Se for aplicador, só vê as dele. Se coordenação, vê todas."""
+    nome_usuario = usuario.get("nome")
+    papel = usuario.get("papel")
+    
+    print(f"{DEBUG_TAG} /pendencias solicitada por {nome_usuario} (Papel: {papel})")
+    
+    # Aqui vai a chamada pro seu database.py para buscar as pendências
+    # Se papel == 'aplicador', filtra no SQL: WHERE aplicador = nome_usuario
+    # Se papel == 'coordenacao', SELECT * FROM pendencias
+    
+    # MOCK de retorno
+    return []
+
+
+@app.patch("/pendencias/{id_pendencia}")
+def atualizar_pendencia(id_pendencia: int, request: PendenciaUpdateRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """Marca uma pendência como feita (✅)"""
+    papel = usuario.get("papel")
+    
+    # Lógica de segurança: aplicador só pode alterar o que é dele (você valida isso no SQL/database)
+    # database.marcar_pendencia_como_feita(id_pendencia, request.feito, usuario.get("nome"), papel)
+    
+    print(f"{DEBUG_TAG} Pendência {id_pendencia} alterada para {request.feito} por {usuario.get('nome')}")
+    return {"mensagem": "Status atualizado com sucesso", "feito": request.feito}
 
 if __name__ == "__main__":
     import uvicorn
