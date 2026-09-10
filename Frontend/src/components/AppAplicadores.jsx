@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 
 
 // URL do seu backend no Render (substitua pela sua URL real de produção quando publicar)
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = "https://capyos.onrender.com";
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('capy_token') || '');
