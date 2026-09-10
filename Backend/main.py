@@ -540,7 +540,42 @@ def atualizar_pendencia(id_pendencia: int, request: PendenciaUpdateRequest, usua
     print(f"{DEBUG_TAG} Pendência {id_pendencia} alterada para {request.feito} por {nome_usuario}")
     return {"mensagem": "Status atualizado com sucesso", "feito": request.feito}
 
-
+# ==========================================
+# ROTA TEMPORÁRIA: INJETAR TITAS DE TESTE
+# ==========================================
+@app.get("/debug/criar-pendencias")
+def criar_pendencias_temporario():
+    """Rota provisória para popular a tela com tarefas de teste para dois aplicadores."""
+    from datetime import date
+    
+    tarefas = [
+        # Titas do Kennendy
+        {"data": date(2026, 9, 11), "dia_semana": "Sexta", "horario": "09:00", "tita": "Joãozinho (Massa de Modelar)", "aplicador": "Kennendy Brito", "observacao": "Focar no pareamento inicial"},
+        {"data": date(2026, 9, 11), "dia_semana": "Sexta", "horario": "10:00", "tita": "Mariazinha (Quebra-cabeça)", "aplicador": "Kennendy Brito", "observacao": "Reforço a cada 3 peças"},
+        
+        # Titas da Ana (Outra aplicadora)
+        {"data": date(2026, 9, 11), "dia_semana": "Sexta", "horario": "09:30", "tita": "Pedrinho (Imitação)", "aplicador": "Ana Silva", "observacao": "Bater palmas"},
+        {"data": date(2026, 9, 11), "dia_semana": "Sexta", "horario": "11:00", "tita": "Aninha (Mando)", "aplicador": "Ana Silva", "observacao": "Pedir água"}
+    ]
+    
+    conn = database.get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Limpa pendências antigas de teste para não duplicar
+            cur.execute("TRUNCATE TABLE pendencias RESTART IDENTITY;")
+            
+            for t in tarefas:
+                cur.execute("""
+                    INSERT INTO pendencias (data, dia_semana, horario, tita, aplicador, observacao)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (t["data"], t["dia_semana"], t["horario"], t["tita"], t["aplicador"], t["observacao"]))
+        conn.commit()
+        return {"mensagem": "Titas de teste mistos criados com sucesso! Pode testar."}
+    except Exception as e:
+        return {"erro": str(e)}
+    finally:
+        conn.close()
+        
 
 
 
