@@ -164,16 +164,79 @@ export default function AppAplicadores() {
   }
 
   // ==========================================
+  // TELA DE LOGIN (Estilo Minecraft)
+  // ==========================================
+  if (!token) {
+    return (
+      <div style={{ width: '100%', maxWidth: '400px', margin: '40px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px', boxSizing: 'border-box' }}>
+        
+        <div style={{ marginBottom: 16 }}>
+          <Capybara pose="andando" />
+        </div>
+        
+        <h2 className="mc-title" style={{ fontSize: 20, marginBottom: 20, textAlign: 'center', lineHeight: '1.4' }}>
+          CapyOS <br/> <span style={{ fontSize: 14, color: '#F0F8FF' }}>Aplicadores</span>
+        </h2>
+
+        <div style={{ width: '100%' }}>
+          <MinecraftPanel title="Acesso Restrito">
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
+              <input 
+                type="text" 
+                placeholder="Seu login" 
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
+                style={{ 
+                  padding: '12px', 
+                  fontFamily: '"Press Start 2P", monospace', 
+                  fontSize: '12px', 
+                  border: '2px solid #555', 
+                  backgroundColor: '#d9d9d9', 
+                  outline: 'none',
+                  boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)'
+                }}
+                required
+              />
+              <input 
+                type="password" 
+                placeholder="Sua senha" 
+                value={senhaInput}
+                onChange={(e) => setSenhaInput(e.target.value)}
+                style={{ 
+                  padding: '12px', 
+                  fontFamily: '"Press Start 2P", monospace', 
+                  fontSize: '12px', 
+                  border: '2px solid #555', 
+                  backgroundColor: '#d9d9d9', 
+                  outline: 'none',
+                  boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)'
+                }}
+                required
+              />
+              
+              <MinecraftButton type="submit" onClick={() => {}}>
+                {carregando ? 'Entrando...' : 'Entrar'}
+              </MinecraftButton>
+              
+              {erro && <p style={{ color: '#ff5555', fontSize: '12px', textAlign: 'center', margin: 0, textShadow: '1px 1px 0 #000' }}>{erro}</p>}
+            </form>
+          </MinecraftPanel>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
   // TELA PRINCIPAL DE PENDÊNCIAS (Estilo Minecraft)
   // ==========================================
   return (
-    <div style={{ width: '100%', maxWidth: '600px', margin: '20px auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ width: '100%', maxWidth: '600px', margin: '20px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 16px', boxSizing: 'border-box' }}>
       
       {/* Cabeçalho */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '24px' }}>
-        <div>
-          <h2 className="mc-title" style={{ fontSize: 18, margin: 0, textAlign: 'left' }}>Olá, {usuarioNome} 💜</h2>
-          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '14px', margin: '4px 0 0 0' }}>Suas pendências de titas</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '24px', gap: '10px' }}>
+        <div style={{ flex: 1 }}>
+          <h2 className="mc-title" style={{ fontSize: 16, margin: 0, textAlign: 'left', lineHeight: '1.3' }}>Olá, {usuarioNome} 💜</h2>
+          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>Suas pendências</p>
         </div>
         <div>
           <MinecraftButton onClick={handleLogout}>Sair</MinecraftButton>
@@ -184,8 +247,8 @@ export default function AppAplicadores() {
       <div style={{ width: '100%' }}>
         <MinecraftPanel title="Lista de Titas">
           {pendencias.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '14px', fontFamily: '"Press Start 2P", monospace', lineHeight: '1.5' }}>
-              Nenhuma pendência<br/>encontrada por enquanto! 🎉
+            <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '12px', fontFamily: '"Press Start 2P", monospace', lineHeight: '1.6' }}>
+              Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
