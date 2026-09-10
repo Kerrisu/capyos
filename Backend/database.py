@@ -56,36 +56,39 @@ def criar_tabelas():
     Cria as tabelas se ainda não existirem. Roda automaticamente no startup
     do FastAPI (ver main.py) — seguro rodar toda vez, não duplica nada.
     """
-    # Adicione isso dentro da sua função criar_tabelas() no database.py
-    
-    comando_sql_usuarios = """
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id SERIAL PRIMARY KEY,
-        nome VARCHAR(255) NOT NULL,
-        login VARCHAR(100) UNIQUE NOT NULL,
-        senha_hash VARCHAR(255) NOT NULL,
-        papel VARCHAR(50) NOT NULL -- 'aplicador' ou 'coordenacao'
-    );
-    """
-    
-    comando_sql_pendencias = """
-    CREATE TABLE IF NOT EXISTS pendencias (
-        id SERIAL PRIMARY KEY,
-        data DATE NOT NULL,
-        dia_semana VARCHAR(20),
-        horario VARCHAR(10),
-        tita VARCHAR(255),
-        aplicador VARCHAR(255) NOT NULL,
-        feito BOOLEAN DEFAULT FALSE,
-        observacao TEXT
-    );
-    """
-    # Lembre-se de dar cursor.execute(comando_sql_usuarios) e cursor.execute(comando_sql_pendencias)
-  
     print(f"{DEBUG_TAG} Verificando/criando tabelas...")
     conn = get_connection()
     try:
         with conn.cursor() as cur:
+            # ====================================================
+            # 1. CRIANDO AS NOVAS TABELAS (USUÁRIOS E PENDÊNCIAS)
+            # ====================================================
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id SERIAL PRIMARY KEY,
+                    nome VARCHAR(255) NOT NULL,
+                    login VARCHAR(100) UNIQUE NOT NULL,
+                    senha_hash VARCHAR(255) NOT NULL,
+                    papel VARCHAR(50) NOT NULL -- 'aplicador' ou 'coordenacao'
+                );
+            """)
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS pendencias (
+                    id SERIAL PRIMARY KEY,
+                    data DATE NOT NULL,
+                    dia_semana VARCHAR(20),
+                    horario VARCHAR(10),
+                    tita VARCHAR(255),
+                    aplicador VARCHAR(255) NOT NULL,
+                    feito BOOLEAN DEFAULT FALSE,
+                    observacao TEXT
+                );
+            """)
+
+            # ====================================================
+            # 2. CRIANDO AS TABELAS ANTIGAS DO CAPYOS
+            # ====================================================
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS pacientes (
                     nome TEXT PRIMARY KEY,
@@ -116,17 +119,6 @@ def criar_tabelas():
             """)
 
             # --- Migração pra bancos que já existiam antes dessas colunas
-            # (produção no Neon) — CREATE TABLE IF NOT EXISTS acima não
-            # adiciona coluna em tabela que já existe, então os ADD COLUMN
-            # abaixo cobrem isso. Todos idempotentes (IF NOT EXISTS),
-            # seguro rodar toda vez.
-            #
-            # ⚠️ todas_as_salas precisa nascer com as 13 ABAs (não '{}'),
-            # senão o código deixa de usar o fallback hardcoded assim que a
-            # coluna existir — e passa a devolver uma lista vazia, zerando
-            # o pool de salas em produção (ver distribuir_salas_ia, que só
-            # usa o fallback quando a CHAVE está ausente do dict, não
-            # quando o valor já vem vazio do banco).
             cur.execute("""
                 ALTER TABLE configuracoes_gerais
                     ADD COLUMN IF NOT EXISTS todas_as_salas TEXT[]
@@ -142,7 +134,6 @@ def criar_tabelas():
         print(f"{DEBUG_TAG} Tabelas OK.")
     finally:
         conn.close()
-
 
 # --- PACIENTES: operações específicas (não é "carrega tudo, salva tudo") ---
 
