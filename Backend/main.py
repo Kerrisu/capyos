@@ -540,6 +540,41 @@ def atualizar_pendencia(id_pendencia: int, request: PendenciaUpdateRequest, usua
     print(f"{DEBUG_TAG} Pendência {id_pendencia} alterada para {request.feito} por {nome_usuario}")
     return {"mensagem": "Status atualizado com sucesso", "feito": request.feito}
 
+# ==========================================
+# ROTA TEMPORÁRIA (APAGAR DEPOIS DE USAR)
+# ==========================================
+@app.get("/debug/criar-usuarios")
+def criar_usuarios_temporario():
+    """Rota provisória para popular o banco Neon com os primeiros usuários."""
+    # Instanciando o pwd_context aqui dentro pra garantir que ele pegue a config lá de cima
+    from passlib.context import CryptContext
+    pwd_context_temp = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    
+    usuarios_iniciais = [
+        {"nome": "Coordenação", "login": "coord", "senha_pura": "capy123", "papel": "coordenacao"},
+        {"nome": "Kennendy Brito", "login": "kennendy", "senha_pura": "titas123", "papel": "aplicador"}
+    ]
+    
+    conn = database.get_connection()
+    try:
+        with conn.cursor() as cur:
+            for u in usuarios_iniciais:
+                senha_criptografada = pwd_context_temp.hash(u["senha_pura"])
+                cur.execute("""
+                    INSERT INTO usuarios (nome, login, senha_hash, papel)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (login) DO NOTHING;
+                """, (u["nome"], u["login"], senha_criptografada, u["papel"]))
+        conn.commit()
+        return {"mensagem": "Usuários criados com sucesso no banco Neon! Pode apagar esta rota."}
+    except Exception as e:
+        return {"erro": str(e)}
+    finally:
+        conn.close()
+
+
+
+
 if __name__ == "__main__":
     import uvicorn
     print("🔧[CAPYOS-DEBUG] Subindo servidor via uvicorn diretamente (modo dev)...")
