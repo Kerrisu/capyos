@@ -9,6 +9,7 @@ const API_URL = "https://capyos.onrender.com";
 export default function AppAplicadores() {
   const [token, setToken] = useState(localStorage.getItem('capy_token') || '');
   const [usuarioNome, setUsuarioNome] = useState(localStorage.getItem('capy_nome') || '');
+  const [usuarioPapel, setUsuarioPapel] = useState(localStorage.getItem('capy_papel') || '');
   const [loginInput, setLoginInput] = useState('');
   const [senhaInput, setSenhaInput] = useState('');
   const [pendencias, setPendencias] = useState([]);
@@ -35,8 +36,10 @@ export default function AppAplicadores() {
 
       localStorage.setItem('capy_token', data.access_token);
       localStorage.setItem('capy_nome', data.nome);
+      localStorage.setItem('capy_papel', data.papel);
       setToken(data.access_token);
       setUsuarioNome(data.nome);
+      setUsuarioPapel(data.papel);
     } catch (err) {
       setErro(err.message);
     } finally {
@@ -64,7 +67,6 @@ export default function AppAplicadores() {
 
   const toggleFeito = async (id, statusAtual) => {
     const novoStatus = !statusAtual;
-    
     setPendencias(pendencias.map(p => p.id === id ? { ...p, feito: novoStatus } : p));
 
     try {
@@ -89,8 +91,10 @@ export default function AppAplicadores() {
   const handleLogout = () => {
     localStorage.removeItem('capy_token');
     localStorage.removeItem('capy_nome');
+    localStorage.removeItem('capy_papel');
     setToken('');
     setUsuarioNome('');
+    setUsuarioPapel('');
     setPendencias([]);
   };
 
@@ -100,124 +104,31 @@ export default function AppAplicadores() {
     }
   }, [token]);
 
-  // ==========================================
-  // TELA DE LOGIN (Estilo Minecraft)
-  // ==========================================
-  if (!token) {
-    return (
-      <div style={{ width: '100%', maxWidth: '400px', margin: '40px auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        
-        <div style={{ marginBottom: 16 }}>
-          <Capybara pose="andando" />
-        </div>
-        
-        <h2 className="mc-title" style={{ fontSize: 24, marginBottom: 20, textAlign: 'center' }}>
-          CapyOS <br/> <span style={{ fontSize: 16, color: '#F0F8FF' }}>Aplicadores</span>
-        </h2>
-
-        <div style={{ width: '100%' }}>
-          <MinecraftPanel title="Acesso Restrito">
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
-              <input 
-                type="text" 
-                placeholder="Seu login" 
-                value={loginInput}
-                onChange={(e) => setLoginInput(e.target.value)}
-                style={{ 
-                  padding: '12px', 
-                  fontFamily: '"Press Start 2P", monospace', 
-                  fontSize: '12px', 
-                  border: '2px solid #555', 
-                  backgroundColor: '#d9d9d9', 
-                  outline: 'none',
-                  boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)'
-                }}
-                required
-              />
-              <input 
-                type="password" 
-                placeholder="Sua senha" 
-                value={senhaInput}
-                onChange={(e) => setSenhaInput(e.target.value)}
-                style={{ 
-                  padding: '12px', 
-                  fontFamily: '"Press Start 2P", monospace', 
-                  fontSize: '12px', 
-                  border: '2px solid #555', 
-                  backgroundColor: '#d9d9d9', 
-                  outline: 'none',
-                  boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)'
-                }}
-                required
-              />
-              
-              <MinecraftButton type="submit" onClick={() => {}}>
-                {carregando ? 'Entrando...' : 'Entrar'}
-              </MinecraftButton>
-              
-              {erro && <p style={{ color: '#ff5555', fontSize: '12px', textAlign: 'center', margin: 0, textShadow: '1px 1px 0 #000' }}>{erro}</p>}
-            </form>
-          </MinecraftPanel>
-        </div>
-      </div>
-    );
-  }
+  // AGRUPA AS PENDÊNCIAS POR APLICADOR
+  const pendenciasAgrupadas = pendencias.reduce((acc, p) => {
+    if (!acc[p.aplicador]) acc[p.aplicador] = [];
+    acc[p.aplicador].push(p);
+    return acc;
+  }, {});
 
   // ==========================================
-  // TELA DE LOGIN (Estilo Minecraft)
+  // TELA DE LOGIN 
   // ==========================================
   if (!token) {
     return (
       <div style={{ width: '100%', maxWidth: '400px', margin: '40px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px', boxSizing: 'border-box' }}>
-        
         <div style={{ marginBottom: 16 }}>
           <Capybara pose="andando" />
         </div>
-        
         <h2 className="mc-title" style={{ fontSize: 20, marginBottom: 20, textAlign: 'center', lineHeight: '1.4' }}>
           CapyOS <br/> <span style={{ fontSize: 14, color: '#F0F8FF' }}>Aplicadores</span>
         </h2>
-
         <div style={{ width: '100%' }}>
           <MinecraftPanel title="Acesso Restrito">
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
-              <input 
-                type="text" 
-                placeholder="Seu login" 
-                value={loginInput}
-                onChange={(e) => setLoginInput(e.target.value)}
-                style={{ 
-                  padding: '12px', 
-                  fontFamily: '"Press Start 2P", monospace', 
-                  fontSize: '12px', 
-                  border: '2px solid #555', 
-                  backgroundColor: '#d9d9d9', 
-                  outline: 'none',
-                  boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)'
-                }}
-                required
-              />
-              <input 
-                type="password" 
-                placeholder="Sua senha" 
-                value={senhaInput}
-                onChange={(e) => setSenhaInput(e.target.value)}
-                style={{ 
-                  padding: '12px', 
-                  fontFamily: '"Press Start 2P", monospace', 
-                  fontSize: '12px', 
-                  border: '2px solid #555', 
-                  backgroundColor: '#d9d9d9', 
-                  outline: 'none',
-                  boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)'
-                }}
-                required
-              />
-              
-              <MinecraftButton type="submit" onClick={() => {}}>
-                {carregando ? 'Entrando...' : 'Entrar'}
-              </MinecraftButton>
-              
+              <input type="text" placeholder="Seu login" value={loginInput} onChange={(e) => setLoginInput(e.target.value)} style={{ padding: '12px', fontFamily: '"Press Start 2P", monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} required />
+              <input type="password" placeholder="Sua senha" value={senhaInput} onChange={(e) => setSenhaInput(e.target.value)} style={{ padding: '12px', fontFamily: '"Press Start 2P", monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} required />
+              <MinecraftButton type="submit" onClick={() => {}}>{carregando ? 'Entrando...' : 'Entrar'}</MinecraftButton>
               {erro && <p style={{ color: '#ff5555', fontSize: '12px', textAlign: 'center', margin: 0, textShadow: '1px 1px 0 #000' }}>{erro}</p>}
             </form>
           </MinecraftPanel>
@@ -227,23 +138,22 @@ export default function AppAplicadores() {
   }
 
   // ==========================================
-  // TELA PRINCIPAL DE PENDÊNCIAS (Estilo Minecraft)
+  // TELA PRINCIPAL DE PENDÊNCIAS
   // ==========================================
   return (
     <div style={{ width: '100%', maxWidth: '600px', margin: '20px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 16px', boxSizing: 'border-box' }}>
-      
-      {/* Cabeçalho */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '24px', gap: '10px' }}>
         <div style={{ flex: 1 }}>
           <h2 className="mc-title" style={{ fontSize: 16, margin: 0, textAlign: 'left', lineHeight: '1.3' }}>Olá, {usuarioNome} 💜</h2>
-          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>Suas pendências</p>
+          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>
+            {usuarioPapel === 'coordenacao' ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
+          </p>
         </div>
         <div>
           <MinecraftButton onClick={handleLogout}>Sair</MinecraftButton>
         </div>
       </div>
 
-      {/* Lista de Titas */}
       <div style={{ width: '100%' }}>
         <MinecraftPanel title="Lista de Titas">
           {pendencias.length === 0 ? (
@@ -251,38 +161,38 @@ export default function AppAplicadores() {
               Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
-              {pendencias.map((p) => (
-                <div 
-                  key={p.id} 
-                  onClick={() => toggleFeito(p.id, p.feito)}
-                  style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    padding: '14px', 
-                    backgroundColor: p.feito ? '#a8e6cf' : '#C6C6C6', 
-                    border: '2px solid',
-                    borderColor: p.feito ? '#3b7d4f' : '#fff #555 #555 #fff',
-                    boxShadow: p.feito ? 'inset -2px -2px 0px rgba(0,0,0,0.2)' : 'inset -2px -2px 0px #555, inset 2px 2px 0px #fff',
-                    cursor: 'pointer',
-                    imageRendering: 'pixelated'
-                  }}
-                >
-                  <div style={{ fontFamily: '"Press Start 2P", monospace' }}>
-                    <div style={{ fontSize: '10px', color: '#333', marginBottom: '8px' }}>
-                      {p.data} ({p.dia_semana}) - {p.horario}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#000', lineHeight: '1.4' }}>
-                      Tita: <strong style={{ color: p.feito ? '#1d5930' : '#000' }}>{p.tita}</strong>
-                    </div>
-                    {p.observacao && <div style={{ fontSize: '9px', color: '#555', marginTop: '6px' }}>Obs: {p.observacao}</div>}
-                  </div>
-                  <div style={{ fontSize: '24px', textShadow: '1px 1px 0 rgba(0,0,0,0.3)', marginLeft: '10px' }}>
-                    {p.feito ? '✅' : '⬜'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
+              
+              {/* RENDERIZAÇÃO CATEGORIZADA POR APLICADOR */}
+              {Object.keys(pendenciasAgrupadas).map((aplicador) => (
+                <div key={aplicador}>
+                  {/* Título da Categoria */}
+                  <h3 style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: '0 0 10px 0', borderBottom: '2px solid #555', paddingBottom: '6px' }}>
+                    &gt; {aplicador}
+                  </h3>
+                  
+                  {/* Cards do Aplicador */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {pendenciasAgrupadas[aplicador].map((p) => (
+                      <div 
+                        key={p.id} 
+                        onClick={() => toggleFeito(p.id, p.feito)}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', backgroundColor: p.feito ? '#a8e6cf' : '#C6C6C6', border: '2px solid', borderColor: p.feito ? '#3b7d4f' : '#fff #555 #555 #fff', boxShadow: p.feito ? 'inset -2px -2px 0px rgba(0,0,0,0.2)' : 'inset -2px -2px 0px #555, inset 2px 2px 0px #fff', cursor: 'pointer', imageRendering: 'pixelated' }}
+                      >
+                        <div style={{ fontFamily: '"Press Start 2P", monospace' }}>
+                          <div style={{ fontSize: '10px', color: '#333', marginBottom: '8px' }}>{p.data} ({p.dia_semana}) - {p.horario}</div>
+                          <div style={{ fontSize: '12px', color: '#000', lineHeight: '1.4' }}>Tita: <strong style={{ color: p.feito ? '#1d5930' : '#000' }}>{p.tita}</strong></div>
+                          {p.observacao && <div style={{ fontSize: '9px', color: '#555', marginTop: '6px' }}>Obs: {p.observacao}</div>}
+                        </div>
+                        <div style={{ fontSize: '24px', textShadow: '1px 1px 0 rgba(0,0,0,0.3)', marginLeft: '10px' }}>
+                          {p.feito ? '✅' : '⬜'}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
+
             </div>
           )}
         </MinecraftPanel>
