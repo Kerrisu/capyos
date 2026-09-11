@@ -3,7 +3,7 @@ CapyOS Backend - Schemas Pydantic (modelos de dados das requisições/respostas)
 """
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 # --- MODELOS EXISTENTES DO CAPYOS ---
 class GerarEscalaRequest(BaseModel):
@@ -68,6 +68,23 @@ class PendenciaResponse(BaseModel):
     aplicador: str
     feito: bool
     observacao: Optional[str]
+    dias_pendente: int
 
 class PendenciaUpdateRequest(BaseModel):
     feito: bool
+
+
+# --- NOVOS MODELOS: FASE 2 (CADASTRO EM MASSA E REMOÇÃO EM LOTE) ---
+
+class PendenciaBulkRequest(BaseModel):
+    texto: str  # bloco colado, uma pendência por linha, campos separados por ';'
+
+class PendenciaBulkResponse(BaseModel):
+    inseridos: int
+    erros: List[str]  # ex: "Linha 3: data inválida (use DD/MM/AAAA)"
+
+class RemocaoLoteRequest(BaseModel):
+    ids: List[int]
+
+class RemocaoLoteResponse(BaseModel):
+    removidos: int
