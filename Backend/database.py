@@ -333,9 +333,17 @@ def listar_pendencias_db(nome_usuario: str, papel: str):
                     ORDER BY data ASC, horario ASC;
                 """, (nome_usuario,))
             linhas = cur.fetchall()
-        return [dict(linha) for linha in linhas]
+
+        resultado = []
+        for linha in linhas:
+            linha_dict = dict(linha)
+            if linha_dict.get("data") is not None:
+                linha_dict["data"] = linha_dict["data"].isoformat()  # date -> "2026-09-10"
+            resultado.append(linha_dict)
+        return resultado
     finally:
         conn.close()
+
 
 
 def marcar_pendencia_como_feita(id_pendencia: int, feito: bool, nome_usuario: str, papel: str):
