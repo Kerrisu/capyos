@@ -21,7 +21,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends
 from passlib.context import CryptContext
 import jwt
-from models import LoginRequest, TokenResponse, PendenciaResponse, PendenciaUpdateRequest
+from models import (
+    LoginRequest, TokenResponse, PendenciaResponse, PendenciaUpdateRequest,
+    PendenciaBulkRequest, PendenciaBulkResponse, RemocaoLoteRequest, RemocaoLoteResponse,
+)
 
 # Configurações de Segurança e JWT
 SECRET_KEY = os.environ.get("JWT_SECRET", "capyos_super_secreta_2026") # Mude no Render depois
@@ -539,6 +542,100 @@ def atualizar_pendencia(id_pendencia: int, request: PendenciaUpdateRequest, usua
     
     print(f"{DEBUG_TAG} Pendência {id_pendencia} alterada para {request.feito} por {nome_usuario}")
     return {"mensagem": "Status atualizado com sucesso", "feito": request.feito}
+
+
+# ==========================================
+# CADASTRO EM MASSA E REMOÇÃO EM LOTE
+# ==========================================
+
+DIAS_SEMANA_PT = [
+    "Segunda-feira", "Terça-feira", "Quarta-feira",
+    "Quinta-feira", "Sexta-feira", "Sábado", "Domingo",
+]
+
+
+def _parse_linha_bulk(numero_linha: int, linha_bruta: str):
+    """
+    Faz o parse de uma linha no formato DATA;HORARIO;TITA;APLICADOR;OBSERVACAO
+    Retorna (dict_pronto_pra_inserir, None) em caso de sucesso,
+    ou (None, "mensagem de erro") em caso de falha.
+    """
+    campos = linha_bruta.split(";")
+
+    if len(campos) < 4:
+        return None, f"Linha {numero_linha}: esperado no mínimo 4 campos (DATA;HORARIO;TITA;APLICADOR), encontrado {len(campos)}."
+
+    data_str = campos[0].strip()
+    horario_str = campos[1].strip()
+    tita_str = campos[2].strip()
+    aplicador_str = campos[3].strip()
+    observacao_str = campos[4].strip() if len(campos) >= 5 and campos[4].strip() else None
+
+    if not data_str or not horario_str or not tita_str or not aplicador_str:
+        return None, f"Linha {numero_linha}: DATA, HORARIO, TITA e APLICADOR não podem ficar vazios."
+
+    try:
+        data_obj = datetime.strptime(data_str, "%d/%m/%Y").date()
+    except ValueError:
+        return None, f"Linha {numero_linha}: data '{data_str}' inválida (use o formato DD/MM/AAAA)."
+
+    dia_semana = DIAS_SEMANA_PT[data_obj.weekday()]
+
+    pendencia = {
+        "data": data_obj,
+        "dia_semana": dia_semana,
+        "horario": horario_str,
+        "tita": tita_str,
+        "aplicador": aplicador_str,
+        "observacao": observacao_str,
+    }
+    return pendencia, None
+
+
+@app.post("/pendencias/bulk", response_model=PendenciaBulkResponse)
+def cadastrar_pendencias_em_lote(request: PendenciaBulkRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """
+    Cadastro em massa de titas pendentes. Cada linha do texto colado segue o
+    formato: DATA;HORARIO;TITA;APLICADOR;OBSERVACAO (observação é opcional).
+    Restrito à coordenação.
+    """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode cadastrar pendências em massa.")
+
+    linhas = [l for l in request.texto.splitlines() if l.strip()]
+
+    if not linhas:
+        raise HTTPException(status_code=400, detail="Nenhuma linha válida encontrada no texto enviado.")
+
+    pendencias_validas = []
+    erros = []
+    for i, linha in enumerate(linhas, start=1):
+        pendencia, erro = _parse_linha_bulk(i, linha)
+        if erro:
+            erros.append(erro)
+        else:
+            pendencias_validas.append(pendencia)
+
+    inseridos = database.inserir_pendencias_em_lote(pendencias_validas)
+    print(f"{DEBUG_TAG} Cadastro em massa: {inseridos} inseridos, {len(erros)} erros (por {usuario.get('nome')})")
+
+    return PendenciaBulkResponse(inseridos=inseridos, erros=erros)
+
+
+@app.delete("/pendencias/lote", response_model=RemocaoLoteResponse)
+def remover_pendencias_em_lote_rota(request: RemocaoLoteRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """
+    Remove definitivamente do banco as pendências já marcadas como feitas,
+    depois da aprovação da coordenação (fila de 'aguardando aprovação').
+    Restrito à coordenação.
+    """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode aprovar a remoção em lote.")
+
+    removidos = database.remover_pendencias_em_lote(request.ids)
+    print(f"{DEBUG_TAG} Remoção em lote: {removidos} pendências removidas (aprovado por {usuario.get('nome')})")
+
+    return RemocaoLoteResponse(removidos=removidos)
 
 # ==========================================
 # ROTA TEMPORÁRIA: INJETAR TITAS DE TESTE

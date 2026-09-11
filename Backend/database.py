@@ -14,6 +14,7 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+from datetime import date
 
 DEBUG_TAG = "🔧[CAPYOS-DB-DEBUG]"
 
@@ -334,16 +335,20 @@ def listar_pendencias_db(nome_usuario: str, papel: str):
                 """, (nome_usuario,))
             linhas = cur.fetchall()
 
+        hoje = date.today()
         resultado = []
         for linha in linhas:
             linha_dict = dict(linha)
-            if linha_dict.get("data") is not None:
-                linha_dict["data"] = linha_dict["data"].isoformat()  # date -> "2026-09-10"
+            data_pendencia = linha_dict.get("data")
+            if data_pendencia is not None:
+                linha_dict["dias_pendente"] = (hoje - data_pendencia).days
+                linha_dict["data"] = data_pendencia.isoformat()  # date -> "2026-09-11"
+            else:
+                linha_dict["dias_pendente"] = 0
             resultado.append(linha_dict)
         return resultado
     finally:
         conn.close()
-
 
 
 def marcar_pendencia_como_feita(id_pendencia: int, feito: bool, nome_usuario: str, papel: str):
@@ -371,5 +376,52 @@ def marcar_pendencia_como_feita(id_pendencia: int, feito: bool, nome_usuario: st
             linhas_afetadas = cur.rowcount
         conn.commit()
         return linhas_afetadas > 0
+    finally:
+        conn.close()
+
+
+def inserir_pendencias_em_lote(pendencias: list[dict]) -> int:
+    """
+    Insere várias pendências de uma vez (cadastro em massa dos auxiliares/coordenação).
+    Cada item de `pendencias` é um dict com: data (date), dia_semana, horario,
+    tita, aplicador, observacao (pode ser None).
+    Retorna quantas linhas foram efetivamente inseridas.
+    """
+    if not pendencias:
+        return 0
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.executemany("""
+                INSERT INTO pendencias (data, dia_semana, horario, tita, aplicador, observacao)
+                VALUES (%(data)s, %(dia_semana)s, %(horario)s, %(tita)s, %(aplicador)s, %(observacao)s);
+            """, pendencias)
+        conn.commit()
+        return len(pendencias)
+    finally:
+        conn.close()
+
+
+def remover_pendencias_em_lote(ids: list[int]) -> int:
+    """
+    Remove definitivamente do banco as pendências cujo id está na lista.
+    Trava de segurança: só remove linhas que já estão marcadas como feito = TRUE,
+    pra nunca apagar por engano algo que ainda está pendente de verdade.
+    Retorna quantas linhas foram removidas.
+    """
+    if not ids:
+        return 0
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM pendencias
+                WHERE id = ANY(%s) AND feito = TRUE;
+            """, (ids,))
+            linhas_removidas = cur.rowcount
+        conn.commit()
+        return linhas_removidas
     finally:
         conn.close()
