@@ -88,3 +88,21 @@ class RemocaoLoteRequest(BaseModel):
 
 class RemocaoLoteResponse(BaseModel):
     removidos: int
+
+
+# --- NOVOS MODELOS: FASE 3 (GESTÃO DE USUÁRIOS/LOGINS) ---
+
+class UsuarioCreateRequest(BaseModel):
+    nome: str
+    login: str
+    senha: str
+    papel: str  # 'aplicador' ou 'coordenacao'
+
+class UsuarioResponse(BaseModel):
+    id: int
+    nome: str
+    login: str
+    papel: str
+
+class UsuarioRemoveResponse(BaseModel):
+    mensagem: str

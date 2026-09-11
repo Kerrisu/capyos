@@ -425,3 +425,76 @@ def remover_pendencias_em_lote(ids: list[int]) -> int:
         return linhas_removidas
     finally:
         conn.close()
+
+
+# --- GESTÃO DE USUÁRIOS/LOGINS ---
+
+class LoginJaExisteError(Exception):
+    """Levantado quando se tenta criar um usuário com um login que já existe."""
+    pass
+
+
+def criar_usuario_db(nome: str, login: str, senha_hash: str, papel: str) -> dict:
+    """
+    Cria um novo usuário (aplicador ou coordenação). Levanta LoginJaExisteError
+    se o login já estiver em uso (constraint UNIQUE na coluna login).
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO usuarios (nome, login, senha_hash, papel)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, nome, login, papel;
+                """, (nome, login, senha_hash, papel))
+                usuario_criado = cur.fetchone()
+            except psycopg.errors.UniqueViolation:
+                conn.rollback()
+                raise LoginJaExisteError(f"Já existe um usuário com o login '{login}'.")
+        conn.commit()
+        return dict(usuario_criado)
+    finally:
+        conn.close()
+
+
+def listar_usuarios_db() -> list[dict]:
+    """Lista todos os usuários (sem o hash da senha), pra tela de gestão."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                SELECT id, nome, login, papel
+                FROM usuarios
+                ORDER BY papel DESC, nome ASC;
+            """)
+            linhas = cur.fetchall()
+        return [dict(linha) for linha in linhas]
+    finally:
+        conn.close()
+
+
+def contar_coordenadores_db() -> int:
+    """Conta quantos usuários com papel 'coordenacao' existem — usado como
+    trava de segurança pra nunca deixar o sistema sem nenhum coordenador."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM usuarios WHERE papel = 'coordenacao';")
+            (total,) = cur.fetchone()
+        return total
+    finally:
+        conn.close()
+
+
+def remover_usuario_db(login: str) -> bool:
+    """Remove um usuário pelo login. Retorna True se realmente existia e foi removido."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM usuarios WHERE login = %s;", (login,))
+            existia = cur.rowcount > 0
+        conn.commit()
+        return existia
+    finally:
+        conn.close()

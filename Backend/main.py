@@ -24,6 +24,7 @@ import jwt
 from models import (
     LoginRequest, TokenResponse, PendenciaResponse, PendenciaUpdateRequest,
     PendenciaBulkRequest, PendenciaBulkResponse, RemocaoLoteRequest, RemocaoLoteResponse,
+    UsuarioCreateRequest, UsuarioResponse, UsuarioRemoveResponse,
 )
 
 # Configurações de Segurança e JWT
@@ -636,6 +637,75 @@ def remover_pendencias_em_lote_rota(request: RemocaoLoteRequest, usuario: dict =
     print(f"{DEBUG_TAG} Remoção em lote: {removidos} pendências removidas (aprovado por {usuario.get('nome')})")
 
     return RemocaoLoteResponse(removidos=removidos)
+
+
+# ==========================================
+# GESTÃO DE USUÁRIOS/LOGINS (só coordenação)
+# ==========================================
+
+PAPEIS_VALIDOS = {"aplicador", "coordenacao"}
+
+
+@app.get("/usuarios", response_model=List[UsuarioResponse])
+def listar_usuarios(usuario: dict = Depends(obter_usuario_logado)):
+    """Lista todos os usuários cadastrados (nome, login, papel). Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode ver a lista de usuários.")
+
+    return database.listar_usuarios_db()
+
+
+@app.post("/usuarios", response_model=UsuarioResponse)
+def criar_usuario(request: UsuarioCreateRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """Cria um novo login (aplicador ou coordenação). Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode criar novos usuários.")
+
+    if request.papel not in PAPEIS_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Papel inválido. Use um de: {', '.join(PAPEIS_VALIDOS)}.")
+
+    if not request.nome.strip() or not request.login.strip() or not request.senha.strip():
+        raise HTTPException(status_code=400, detail="Nome, login e senha não podem ficar vazios.")
+
+    senha_hash = pwd_context.hash(request.senha)
+
+    try:
+        novo_usuario = database.criar_usuario_db(
+            nome=request.nome.strip(),
+            login=request.login.strip(),
+            senha_hash=senha_hash,
+            papel=request.papel,
+        )
+    except database.LoginJaExisteError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    print(f"{DEBUG_TAG} Usuário '{novo_usuario['login']}' ({novo_usuario['papel']}) criado por {usuario.get('nome')}")
+    return novo_usuario
+
+
+@app.delete("/usuarios/{login_alvo}", response_model=UsuarioRemoveResponse)
+def remover_usuario(login_alvo: str, usuario: dict = Depends(obter_usuario_logado)):
+    """Remove um usuário pelo login. Restrito à coordenação, com duas travas de segurança:
+    não deixa remover o próprio usuário logado, nem o último coordenador restante."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode remover usuários.")
+
+    if login_alvo == usuario.get("sub"):
+        raise HTTPException(status_code=400, detail="Você não pode remover o seu próprio usuário logado.")
+
+    usuarios_atuais = database.listar_usuarios_db()
+    alvo = next((u for u in usuarios_atuais if u["login"] == login_alvo), None)
+
+    if alvo is None:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    if alvo["papel"] == "coordenacao" and database.contar_coordenadores_db() <= 1:
+        raise HTTPException(status_code=400, detail="Não é possível remover o último usuário de coordenação do sistema.")
+
+    database.remover_usuario_db(login_alvo)
+    print(f"{DEBUG_TAG} Usuário '{login_alvo}' removido por {usuario.get('nome')}")
+
+    return UsuarioRemoveResponse(mensagem=f"Usuário '{login_alvo}' removido com sucesso.")
 
 # ==========================================
 # ROTA TEMPORÁRIA: INJETAR TITAS DE TESTE
