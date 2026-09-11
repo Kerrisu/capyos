@@ -30,6 +30,17 @@ export default function AppAplicadores() {
   const [carregandoRemocao, setCarregandoRemocao] = useState(false);
   const [mostrarFilaAprovacao, setMostrarFilaAprovacao] = useState(false);
 
+  // GESTÃO DE USUÁRIOS/LOGINS (coordenação)
+  const [usuarios, setUsuarios] = useState([]);
+  const [mostrarGerenciarUsuarios, setMostrarGerenciarUsuarios] = useState(false);
+  const [novoNome, setNovoNome] = useState('');
+  const [novoLogin, setNovoLogin] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [novoPapel, setNovoPapel] = useState('aplicador');
+  const [carregandoUsuario, setCarregandoUsuario] = useState(false);
+  const [erroUsuario, setErroUsuario] = useState('');
+  const [removendoLogin, setRemovendoLogin] = useState('');
+
   const isCoordenacao = usuarioPapel === 'coordenacao';
 
   const handleLogin = async (e) => {
@@ -184,11 +195,90 @@ export default function AppAplicadores() {
     }
   };
 
+  // ==========================================
+  // GESTÃO DE USUÁRIOS/LOGINS
+  // ==========================================
+  const carregarUsuarios = async () => {
+    try {
+      const response = await fetch(`${API_URL}/usuarios`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      setUsuarios(data);
+    } catch (err) {
+      console.error("Erro ao buscar usuários:", err);
+    }
+  };
+
+  const handleCriarUsuario = async () => {
+    if (!novoNome.trim() || !novoLogin.trim() || !novaSenha.trim()) return;
+    setCarregandoUsuario(true);
+    setErroUsuario('');
+
+    try {
+      const response = await fetch(`${API_URL}/usuarios`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ nome: novoNome, login: novoLogin, senha: novaSenha, papel: novoPapel })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Erro ao criar usuário');
+      }
+
+      setNovoNome('');
+      setNovoLogin('');
+      setNovaSenha('');
+      setNovoPapel('aplicador');
+      carregarUsuarios();
+    } catch (err) {
+      setErroUsuario(err.message);
+    } finally {
+      setCarregandoUsuario(false);
+    }
+  };
+
+  const handleRemoverUsuario = async (loginAlvo) => {
+    setRemovendoLogin(loginAlvo);
+    setErroUsuario('');
+
+    try {
+      const response = await fetch(`${API_URL}/usuarios/${encodeURIComponent(loginAlvo)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Erro ao remover usuário');
+      }
+
+      carregarUsuarios();
+    } catch (err) {
+      setErroUsuario(err.message);
+    } finally {
+      setRemovendoLogin('');
+    }
+  };
+
   useEffect(() => {
     if (token) {
       carregarPendencias();
     }
   }, [token]);
+
+  useEffect(() => {
+    if (token && isCoordenacao) {
+      carregarUsuarios();
+    }
+  }, [token, isCoordenacao]);
 
   // AGRUPA AS PENDÊNCIAS POR APLICADOR
   const pendenciasAgrupadas = pendencias.reduce((acc, p) => {
@@ -224,6 +314,21 @@ export default function AppAplicadores() {
   };
 
   const pendenciasParaAprovacao = pendencias.filter(p => p.feito);
+
+  // Extrai o login do próprio usuário a partir do JWT (campo "sub"),
+  // sem precisar de mais uma chamada ao backend
+  const obterLoginAtual = () => {
+    if (!token) return '';
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const payloadJson = JSON.parse(atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/')));
+      return payloadJson.sub || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const loginAtual = obterLoginAtual();
 
   // ==========================================
   // TELA DE LOGIN
@@ -351,6 +456,65 @@ export default function AppAplicadores() {
                 <MinecraftButton onClick={handleConfirmarRemocao} disabled={carregandoRemocao || selecionadosRemocao.length === 0}>
                   {carregandoRemocao ? 'Removendo...' : `Confirmar remoção (${selecionadosRemocao.length})`}
                 </MinecraftButton>
+              </div>
+            )}
+          </MinecraftPanel>
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* GESTÃO DE USUÁRIOS/LOGINS (coordenação) */}
+      {/* ================================================= */}
+      {isCoordenacao && (
+        <div style={{ width: '100%', marginBottom: '20px' }}>
+          <MinecraftPanel title="Gerenciar Aplicadores">
+            <div
+              onClick={() => setMostrarGerenciarUsuarios(!mostrarGerenciarUsuarios)}
+              style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
+            >
+              {mostrarGerenciarUsuarios ? '▼' : '▶'} {usuarios.length} usuário(s) cadastrado(s)
+            </div>
+
+            {mostrarGerenciarUsuarios && (
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                {/* Lista de usuários existentes */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {usuarios.map((u) => (
+                    <div
+                      key={u.login}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#C6C6C6', border: '2px solid', borderColor: '#fff #555 #555 #fff', fontFamily: '"Press Start 2P", monospace', fontSize: '10px' }}
+                    >
+                      <div>
+                        <div style={{ color: '#000' }}>{u.nome} {u.login === loginAtual && '(você)'}</div>
+                        <div style={{ color: '#555', fontSize: '9px', marginTop: '4px' }}>{u.login} · {u.papel}</div>
+                      </div>
+                      <MinecraftButton
+                        onClick={() => handleRemoverUsuario(u.login)}
+                        disabled={u.login === loginAtual || removendoLogin === u.login}
+                        style={{ fontSize: '9px', padding: '8px 10px' }}
+                      >
+                        {removendoLogin === u.login ? '...' : 'Remover'}
+                      </MinecraftButton>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Formulário de criação */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '2px solid #555', paddingTop: '14px' }}>
+                  <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: '"Press Start 2P", monospace' }}>Novo aplicador/coordenação</p>
+                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
+                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
+                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
+                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                    <option value="aplicador">Aplicador</option>
+                    <option value="coordenacao">Coordenação</option>
+                  </select>
+                  <MinecraftButton onClick={handleCriarUsuario} disabled={carregandoUsuario || !novoNome.trim() || !novoLogin.trim() || !novaSenha.trim()}>
+                    {carregandoUsuario ? 'Criando...' : 'Criar Usuário'}
+                  </MinecraftButton>
+                  {erroUsuario && <p style={{ color: '#ff5555', fontSize: '11px', textAlign: 'center', margin: 0 }}>{erroUsuario}</p>}
+                </div>
               </div>
             )}
           </MinecraftPanel>
