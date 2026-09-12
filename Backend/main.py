@@ -491,16 +491,20 @@ def salvar_configuracoes_gerais_rota(request: ConfiguracoesGerais):
 @app.post("/login", response_model=TokenResponse)
 def login_rota(request: LoginRequest):
     """Rota que recebe login e senha, verifica no banco e devolve o Token."""
-    print(f"{DEBUG_TAG} Tentativa de login para: {request.login}")
-    
+    # Remove espaços acidentais no início/fim (comum ao copiar e colar credenciais)
+    login_normalizado = request.login.strip()
+    senha_normalizada = request.senha.strip()
+
+    print(f"{DEBUG_TAG} Tentativa de login para: {login_normalizado}")
+
     # Chama a função real do banco Neon
-    usuario_db = database.buscar_usuario_por_login(request.login)
+    usuario_db = database.buscar_usuario_por_login(login_normalizado)
         
     if not usuario_db:
         raise HTTPException(status_code=401, detail="Usuário não encontrado.")
         
     # Verifica se a senha bate com o hash
-    if not pwd_context.verify(request.senha, usuario_db["senha_hash"]):
+    if not pwd_context.verify(senha_normalizada, usuario_db["senha_hash"]):
         raise HTTPException(status_code=401, detail="Senha incorreta.")
         
     # Gera o Token JWT com validade de 24 horas
@@ -667,7 +671,7 @@ def criar_usuario(request: UsuarioCreateRequest, usuario: dict = Depends(obter_u
     if not request.nome.strip() or not request.login.strip() or not request.senha.strip():
         raise HTTPException(status_code=400, detail="Nome, login e senha não podem ficar vazios.")
 
-    senha_hash = pwd_context.hash(request.senha)
+    senha_hash = pwd_context.hash(request.senha.strip())
 
     try:
         novo_usuario = database.criar_usuario_db(
