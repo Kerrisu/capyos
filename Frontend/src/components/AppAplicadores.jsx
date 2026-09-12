@@ -52,7 +52,7 @@ export default function AppAplicadores() {
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login: loginInput, senha: senhaInput })
+        body: JSON.stringify({ login: loginInput.trim(), senha: senhaInput.trim() })
       });
 
       const data = await response.json();
