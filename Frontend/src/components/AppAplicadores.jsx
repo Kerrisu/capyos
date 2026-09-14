@@ -41,6 +41,13 @@ export default function AppAplicadores() {
   const [erroUsuario, setErroUsuario] = useState('');
   const [removendoLogin, setRemovendoLogin] = useState('');
 
+  // EDIÇÃO DE USUÁRIO EXISTENTE (coordenação)
+  const [loginEmEdicao, setLoginEmEdicao] = useState('');
+  const [edicaoNome, setEdicaoNome] = useState('');
+  const [edicaoSenha, setEdicaoSenha] = useState('');
+  const [edicaoPapel, setEdicaoPapel] = useState('aplicador');
+  const [carregandoEdicao, setCarregandoEdicao] = useState(false);
+
   const isCoordenacao = usuarioPapel === 'coordenacao';
 
   const handleLogin = async (e) => {
@@ -313,6 +320,17 @@ export default function AppAplicadores() {
     return `pendente há ${dias} dias`;
   };
 
+  // PONTO 4: data por extenso, ex: "11 de Setembro de 2026"
+  const MESES_PT = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+  const formatarDataPorExtenso = (dataIso) => {
+    const [ano, mes, dia] = dataIso.split('-').map(Number);
+    const nomeMes = MESES_PT[mes - 1];
+    const nomeMesCapitalizado = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+    return `${dia} de ${nomeMesCapitalizado} de ${ano}`;
+  };
+
   const pendenciasParaAprovacao = pendencias.filter(p => p.feito);
 
   // Extrai o login do próprio usuário a partir do JWT (campo "sub"),
@@ -388,7 +406,7 @@ export default function AppAplicadores() {
 
             {mostrarCadastroBulk && (
               <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <p style={{ fontSize: '9px', color: '#333', lineHeight: '1.6', margin: 0 }}>
+                <p style={{ fontSize: '12px', color: '#333', lineHeight: '1.6', margin: 0 }}>
                   Uma linha por tita, campos separados por ";":<br/>
                   <strong>DATA;HORARIO;TITA;APLICADOR;OBSERVACAO</strong><br/>
                   (DATA no formato DD/MM/AAAA · OBSERVACAO é opcional)
@@ -396,7 +414,7 @@ export default function AppAplicadores() {
                 <textarea
                   value={textoBulk}
                   onChange={(e) => setTextoBulk(e.target.value)}
-                  placeholder={"11/09/2026;14:00;João Pedro;Ana Clara;Levar material\n12/09/2026;09:30;Maria Luiza;Bruno Costa;"}
+                  placeholder={"08/09/2026;09:00;AFONSO DIONISIO;ALICIA VITÓRIA;\n09/09/2026;14:30;CALEB SANTOS;AMANDA ALVES;"}
                   rows={5}
                   style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)', resize: 'vertical' }}
                 />
@@ -409,8 +427,9 @@ export default function AppAplicadores() {
                     <p style={{ color: '#1d5930', margin: '4px 0' }}>✅ {resultadoBulk.inseridos} tita(s) cadastrado(s)</p>
                     {resultadoBulk.erros.length > 0 && (
                       <div style={{ color: '#a83232' }}>
+                        <p style={{ margin: '8px 0 4px 0' }}>❌ {resultadoBulk.erros.length} não cadastrado(s):</p>
                         {resultadoBulk.erros.map((e, i) => (
-                          <p key={i} style={{ margin: '2px 0', fontFamily: 'monospace', fontSize: '11px' }}>⚠️ {e}</p>
+                          <p key={i} style={{ margin: '2px 0 10px 0', fontFamily: '"Press Start 2P", monospace', fontSize: '8px', lineHeight: '1.7', backgroundColor: '#fdeaea', padding: '8px', border: '1px solid #e0b4b4', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{e}</p>
                         ))}
                       </div>
                     )}
@@ -449,7 +468,7 @@ export default function AppAplicadores() {
                         onChange={() => toggleSelecaoRemocao(p.id)}
                         style={{ width: '16px', height: '16px', flexShrink: 0 }}
                       />
-                      <span>{p.tita} <span style={{ color: '#333' }}>({p.aplicador} · {p.data})</span></span>
+                      <span>{p.tita} <span style={{ color: '#333' }}>({p.aplicador} · {formatarDataPorExtenso(p.data)})</span></span>
                     </label>
                   ))}
                 </div>
@@ -478,8 +497,24 @@ export default function AppAplicadores() {
             {mostrarGerenciarUsuarios && (
               <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+                {/* Formulário de criação */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: '"Press Start 2P", monospace' }}>Novo aplicador/coordenação</p>
+                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
+                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
+                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
+                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                    <option value="aplicador">Aplicador</option>
+                    <option value="coordenacao">Coordenação</option>
+                  </select>
+                  <MinecraftButton onClick={handleCriarUsuario} disabled={carregandoUsuario || !novoNome.trim() || !novoLogin.trim() || !novaSenha.trim()}>
+                    {carregandoUsuario ? 'Criando...' : 'Criar Usuário'}
+                  </MinecraftButton>
+                  {erroUsuario && <p style={{ color: '#ff5555', fontSize: '11px', textAlign: 'center', margin: 0 }}>{erroUsuario}</p>}
+                </div>
+
                 {/* Lista de usuários existentes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #555', paddingTop: '14px' }}>
                   {usuarios.map((u) => (
                     <div
                       key={u.login}
@@ -498,22 +533,6 @@ export default function AppAplicadores() {
                       </MinecraftButton>
                     </div>
                   ))}
-                </div>
-
-                {/* Formulário de criação */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '2px solid #555', paddingTop: '14px' }}>
-                  <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: '"Press Start 2P", monospace' }}>Novo aplicador/coordenação</p>
-                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
-                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
-                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
-                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
-                    <option value="aplicador">Aplicador</option>
-                    <option value="coordenacao">Coordenação</option>
-                  </select>
-                  <MinecraftButton onClick={handleCriarUsuario} disabled={carregandoUsuario || !novoNome.trim() || !novoLogin.trim() || !novaSenha.trim()}>
-                    {carregandoUsuario ? 'Criando...' : 'Criar Usuário'}
-                  </MinecraftButton>
-                  {erroUsuario && <p style={{ color: '#ff5555', fontSize: '11px', textAlign: 'center', margin: 0 }}>{erroUsuario}</p>}
                 </div>
               </div>
             )}
@@ -546,7 +565,7 @@ export default function AppAplicadores() {
                       onClick={() => toggleGrupo(aplicador)}
                       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', margin: '0 0 10px 0', borderBottom: '2px solid #555', paddingBottom: '6px' }}
                     >
-                      <h3 style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
+                      <h3 style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '12px', color: '#4C3A8F', textShadow: '1px 1px 0px #fff', margin: 0 }}>
                         {aberto ? '▼' : '▶'} {aplicador}
                       </h3>
                       <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: totalPendentes > 0 ? '#a83232' : '#1d5930', textShadow: '1px 1px 0px #fff' }}>
@@ -564,7 +583,7 @@ export default function AppAplicadores() {
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', backgroundColor: p.feito ? '#a8e6cf' : '#C6C6C6', border: '2px solid', borderColor: p.feito ? '#3b7d4f' : '#fff #555 #555 #fff', boxShadow: p.feito ? 'inset -2px -2px 0px rgba(0,0,0,0.2)' : 'inset -2px -2px 0px #555, inset 2px 2px 0px #fff', cursor: 'pointer', imageRendering: 'pixelated' }}
                           >
                             <div style={{ fontFamily: '"Press Start 2P", monospace' }}>
-                              <div style={{ fontSize: '10px', color: '#333', marginBottom: '8px' }}>{p.data} ({p.dia_semana}) - {p.horario}</div>
+                              <div style={{ fontSize: '10px', color: '#333', marginBottom: '8px' }}>{formatarDataPorExtenso(p.data)} ({p.dia_semana}) - {p.horario}</div>
                               <div style={{ fontSize: '12px', color: '#000', lineHeight: '1.4' }}>Tita: <strong style={{ color: p.feito ? '#1d5930' : '#000' }}>{p.tita}</strong></div>
                               {!p.feito && (
                                 <div style={{ fontSize: '9px', color: p.dias_pendente >= 3 ? '#a83232' : '#555', marginTop: '6px' }}>
