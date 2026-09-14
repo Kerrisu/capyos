@@ -559,16 +559,17 @@ DIAS_SEMANA_PT = [
 ]
 
 
-def _parse_linha_bulk(numero_linha: int, linha_bruta: str):
+def _parse_linha_bulk(linha_bruta: str, aplicadores_validos: set):
     """
     Faz o parse de uma linha no formato DATA;HORARIO;TITA;APLICADOR;OBSERVACAO
     Retorna (dict_pronto_pra_inserir, None) em caso de sucesso,
-    ou (None, "mensagem de erro") em caso de falha.
+    ou (None, "motivo do erro") em caso de falha — sem o prefixo "Linha N",
+    isso é montado por quem chama, junto com a linha original.
     """
     campos = linha_bruta.split(";")
 
     if len(campos) < 4:
-        return None, f"Linha {numero_linha}: esperado no mínimo 4 campos (DATA;HORARIO;TITA;APLICADOR), encontrado {len(campos)}."
+        return None, f"esperado no mínimo 4 campos (DATA;HORARIO;TITA;APLICADOR), encontrado {len(campos)}"
 
     data_str = campos[0].strip()
     horario_str = campos[1].strip()
@@ -577,12 +578,15 @@ def _parse_linha_bulk(numero_linha: int, linha_bruta: str):
     observacao_str = campos[4].strip() if len(campos) >= 5 and campos[4].strip() else None
 
     if not data_str or not horario_str or not tita_str or not aplicador_str:
-        return None, f"Linha {numero_linha}: DATA, HORARIO, TITA e APLICADOR não podem ficar vazios."
+        return None, "DATA, HORARIO, TITA e APLICADOR não podem ficar vazios"
 
     try:
         data_obj = datetime.strptime(data_str, "%d/%m/%Y").date()
     except ValueError:
-        return None, f"Linha {numero_linha}: data '{data_str}' inválida (use o formato DD/MM/AAAA)."
+        return None, f"data '{data_str}' inválida (use o formato DD/MM/AAAA)"
+
+    if aplicador_str not in aplicadores_validos:
+        return None, f"aplicador '{aplicador_str}' não encontrado entre os usuários cadastrados — confira o nome (maiúsculas/acentos incluídos)"
 
     dia_semana = DIAS_SEMANA_PT[data_obj.weekday()]
 
@@ -612,12 +616,14 @@ def cadastrar_pendencias_em_lote(request: PendenciaBulkRequest, usuario: dict = 
     if not linhas:
         raise HTTPException(status_code=400, detail="Nenhuma linha válida encontrada no texto enviado.")
 
+    aplicadores_validos = {u["nome"] for u in database.listar_usuarios_db()}
+
     pendencias_validas = []
     erros = []
     for i, linha in enumerate(linhas, start=1):
-        pendencia, erro = _parse_linha_bulk(i, linha)
-        if erro:
-            erros.append(erro)
+        pendencia, motivo = _parse_linha_bulk(linha, aplicadores_validos)
+        if motivo:
+            erros.append(f'Linha {i}: "{linha}" — {motivo}.')
         else:
             pendencias_validas.append(pendencia)
 
