@@ -50,6 +50,36 @@ export default function AppAplicadores() {
   // engrenagem no canto inferior direito, aberto como um modal por cima da tela
   const [gearMenuAberto, setGearMenuAberto] = useState(false);
 
+  // RELATOS DE SESSÃO SEM ABA NO TITA (aberto a aplicador + coordenação)
+  const DIAS_SEMANA_RELATO = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const HORARIOS_RELATO = ['13:15', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
+
+  const [mostrarPainelRelatar, setMostrarPainelRelatar] = useState(false);
+  const [listaAssistidos, setListaAssistidos] = useState([]);
+  const [relatoBuscaAssistido, setRelatoBuscaAssistido] = useState('');
+  const [relatoAssistidoEscolhido, setRelatoAssistidoEscolhido] = useState('');
+  const [relatoDropdownAberto, setRelatoDropdownAberto] = useState(false);
+  const [relatoModoManual, setRelatoModoManual] = useState(false);
+  const [relatoAssistidoManual, setRelatoAssistidoManual] = useState('');
+  const [relatoDiaSemana, setRelatoDiaSemana] = useState('');
+  const [relatoHorario, setRelatoHorario] = useState('');
+  const [relatoTipo, setRelatoTipo] = useState('');
+  const [relatoObservacao, setRelatoObservacao] = useState('');
+  const [enviandoRelato, setEnviandoRelato] = useState(false);
+  const [mensagemRelato, setMensagemRelato] = useState(null); // { ok: bool, texto: string }
+
+  // PAINEL DA COORDENAÇÃO: ver/filtrar/remover relatos
+  const [mostrarPainelRelatos, setMostrarPainelRelatos] = useState(false);
+  const [relatos, setRelatos] = useState([]);
+  const [carregandoRelatos, setCarregandoRelatos] = useState(false);
+  const [filtroRelatoDia, setFiltroRelatoDia] = useState('');
+  const [filtroRelatoTipo, setFiltroRelatoTipo] = useState('');
+  const [modoRemocaoRelatos, setModoRemocaoRelatos] = useState(false);
+  const [selecionadosRelatos, setSelecionadosRelatos] = useState([]);
+  const [confirmandoRemocaoRelatos, setConfirmandoRemocaoRelatos] = useState(false);
+  const [carregandoRemocaoRelatos, setCarregandoRemocaoRelatos] = useState(false);
+  const confirmarRemocaoRelatosTimeoutRef = useRef(null);
+
   // EDIÇÃO DE USUÁRIO EXISTENTE (coordenação)
   const [loginEmEdicao, setLoginEmEdicao] = useState('');
   const [edicaoNome, setEdicaoNome] = useState('');
@@ -307,9 +337,173 @@ export default function AppAplicadores() {
     }
   };
 
+  // ==========================================
+  // RELATOS DE SESSÃO SEM ABA NO TITA
+  // ==========================================
+  const carregarListaAssistidos = async () => {
+    try {
+      const response = await fetch(`${API_URL}/pacientes`);
+      if (!response.ok) return;
+      const data = await response.json();
+      setListaAssistidos(Object.keys(data.pacientes || {}));
+    } catch (err) {
+      console.error("Erro ao buscar lista de assistidos:", err);
+    }
+  };
+
+  const escolherAssistidoRelato = (nome) => {
+    setRelatoAssistidoEscolhido(nome);
+    setRelatoBuscaAssistido(nome);
+    setRelatoDropdownAberto(false);
+    setRelatoModoManual(false);
+  };
+
+  const ativarModoManualRelato = () => {
+    setRelatoModoManual(true);
+    setRelatoDropdownAberto(false);
+    setRelatoAssistidoEscolhido('');
+  };
+
+  const voltarParaListaRelato = () => {
+    setRelatoModoManual(false);
+    setRelatoAssistidoManual('');
+    setRelatoBuscaAssistido('');
+    setRelatoAssistidoEscolhido('');
+  };
+
+  const limparFormularioRelato = () => {
+    setRelatoBuscaAssistido('');
+    setRelatoAssistidoEscolhido('');
+    setRelatoModoManual(false);
+    setRelatoAssistidoManual('');
+    setRelatoDiaSemana('');
+    setRelatoHorario('');
+    setRelatoTipo('');
+    setRelatoObservacao('');
+  };
+
+  const handleEnviarRelato = async () => {
+    const assistidoFinal = relatoModoManual ? relatoAssistidoManual.trim() : relatoAssistidoEscolhido;
+    if (!assistidoFinal || !relatoDiaSemana || !relatoHorario || !relatoTipo) return;
+
+    setEnviandoRelato(true);
+    setMensagemRelato(null);
+
+    try {
+      const response = await fetch(`${API_URL}/relatos-aba`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          assistido: assistidoFinal,
+          dia_semana: relatoDiaSemana,
+          horario: relatoHorario,
+          tipo: relatoTipo,
+          observacao: relatoObservacao.trim() || null,
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Erro ao enviar relato');
+      }
+
+      setMensagemRelato({ ok: true, texto: `✅ Relato de "${assistidoFinal}" enviado!` });
+      limparFormularioRelato();
+      if (isCoordenacao) carregarRelatos();
+    } catch (err) {
+      setMensagemRelato({ ok: false, texto: err.message });
+    } finally {
+      setEnviandoRelato(false);
+    }
+  };
+
+  const carregarRelatos = async () => {
+    setCarregandoRelatos(true);
+    try {
+      const parametros = new URLSearchParams();
+      if (filtroRelatoDia) parametros.set('dia_semana', filtroRelatoDia);
+      if (filtroRelatoTipo) parametros.set('tipo', filtroRelatoTipo);
+
+      const response = await fetch(`${API_URL}/relatos-aba?${parametros.toString()}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      setRelatos(data);
+    } catch (err) {
+      console.error("Erro ao buscar relatos:", err);
+    } finally {
+      setCarregandoRelatos(false);
+    }
+  };
+
+  const handleToggleModoRemocaoRelatos = () => {
+    setModoRemocaoRelatos(prev => !prev);
+    setSelecionadosRelatos([]);
+    setConfirmandoRemocaoRelatos(false);
+  };
+
+  const toggleSelecaoRelato = (id) => {
+    setConfirmandoRemocaoRelatos(false);
+    setSelecionadosRelatos(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelecionarTodosRelatos = () => {
+    setConfirmandoRemocaoRelatos(false);
+    setSelecionadosRelatos(prev =>
+      prev.length === relatos.length ? [] : relatos.map(r => r.id)
+    );
+  };
+
+  const handleConfirmarRemocaoRelatos = async () => {
+    if (selecionadosRelatos.length === 0) return;
+    setCarregandoRemocaoRelatos(true);
+
+    try {
+      const response = await fetch(`${API_URL}/relatos-aba/lote`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ids: selecionadosRelatos })
+      });
+
+      if (response.ok) {
+        setSelecionadosRelatos([]);
+        setModoRemocaoRelatos(false);
+        carregarRelatos();
+      }
+    } catch (err) {
+      console.error("Erro ao remover relatos em lote:", err);
+    } finally {
+      setCarregandoRemocaoRelatos(false);
+      setConfirmandoRemocaoRelatos(false);
+    }
+  };
+
+  // Mesmo padrão de confirmação dupla usado na remoção em lote de pendências
+  const handleClickConfirmarRemocaoRelatos = () => {
+    if (!confirmandoRemocaoRelatos) {
+      setConfirmandoRemocaoRelatos(true);
+      if (confirmarRemocaoRelatosTimeoutRef.current) clearTimeout(confirmarRemocaoRelatosTimeoutRef.current);
+      confirmarRemocaoRelatosTimeoutRef.current = setTimeout(() => setConfirmandoRemocaoRelatos(false), 4000);
+      return;
+    }
+    if (confirmarRemocaoRelatosTimeoutRef.current) clearTimeout(confirmarRemocaoRelatosTimeoutRef.current);
+    handleConfirmarRemocaoRelatos();
+  };
+
   useEffect(() => {
     if (token) {
       carregarPendencias();
+      carregarListaAssistidos();
     }
   }, [token]);
 
@@ -318,6 +512,12 @@ export default function AppAplicadores() {
       carregarUsuarios();
     }
   }, [token, isCoordenacao]);
+
+  useEffect(() => {
+    if (token && isCoordenacao && mostrarPainelRelatos) {
+      carregarRelatos();
+    }
+  }, [token, isCoordenacao, mostrarPainelRelatos, filtroRelatoDia, filtroRelatoTipo]);
 
   // AGRUPA AS PENDÊNCIAS POR APLICADOR
   const pendenciasAgrupadas = pendencias.reduce((acc, p) => {
@@ -364,6 +564,18 @@ export default function AppAplicadores() {
   const aplicadoresFiltrados = nomesAplicadores.filter(ap =>
     normalizarTexto(ap).includes(normalizarTexto(buscaAplicador))
   );
+
+  // RELATOS: busca de assistido dentro da lista já cadastrada no sistema
+  const assistidosFiltrados = relatoBuscaAssistido.trim()
+    ? listaAssistidos.filter(nome => normalizarTexto(nome).includes(normalizarTexto(relatoBuscaAssistido))).slice(0, 8)
+    : listaAssistidos.slice(0, 8);
+
+  const LABEL_TIPO_RELATO = {
+    sem_aba: 'Está sem ABA no TITA',
+    perdeu_sessao: 'Não possui mais essa sessão',
+  };
+
+  const capitalizar = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
   const textoDiasPendente = (dias) => {
     if (dias <= 0) return 'pendente hoje';
@@ -440,6 +652,117 @@ export default function AppAplicadores() {
         <div>
           <MinecraftButton onClick={handleLogout}>Sair</MinecraftButton>
         </div>
+      </div>
+
+      {/* ========================================== */}
+      {/* RELATAR SESSÃO SEM ABA NO TITA (aplicador + coordenação) */}
+      {/* ========================================== */}
+      <div style={{ width: '100%', marginBottom: '20px' }}>
+        <MinecraftPanel title="Relatar Sessão sem ABA">
+          <div
+            onClick={() => setMostrarPainelRelatar(!mostrarPainelRelatar)}
+            style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
+          >
+            {mostrarPainelRelatar ? '▼' : '▶'} Assistido sem ABA no TITA
+          </div>
+
+          {mostrarPainelRelatar && (
+            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <p style={{ fontSize: '11px', color: '#333', lineHeight: '1.5', margin: 0 }}>
+                Use quando um assistido tem/tinha sessão de ABA marcada na agenda, mas ela não existe no Titas.
+              </p>
+
+              {!relatoModoManual ? (
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar assistido..."
+                    value={relatoBuscaAssistido}
+                    onChange={(e) => { setRelatoBuscaAssistido(e.target.value); setRelatoAssistidoEscolhido(''); setRelatoDropdownAberto(true); }}
+                    onFocus={() => setRelatoDropdownAberto(true)}
+                    onBlur={() => setTimeout(() => setRelatoDropdownAberto(false), 150)}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                  />
+                  {relatoDropdownAberto && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, backgroundColor: '#fff', border: '2px solid #555', maxHeight: '200px', overflowY: 'auto', boxShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>
+                      {assistidosFiltrados.length === 0 && (
+                        <div style={{ padding: '8px 10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#777' }}>Nenhum assistido encontrado</div>
+                      )}
+                      {assistidosFiltrados.map((nome) => (
+                        <div
+                          key={nome}
+                          onMouseDown={() => escolherAssistidoRelato(nome)}
+                          style={{ padding: '8px 10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', cursor: 'pointer', borderBottom: '1px solid #ccc' }}
+                        >
+                          {nome}
+                        </div>
+                      ))}
+                      <div
+                        onMouseDown={ativarModoManualRelato}
+                        style={{ padding: '8px 10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', cursor: 'pointer', color: '#4C3A8F' }}
+                      >
+                        ➕ Outro (nome não está na lista)
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <input
+                    type="text"
+                    placeholder="Nome completo do assistido"
+                    value={relatoAssistidoManual}
+                    onChange={(e) => setRelatoAssistidoManual(e.target.value)}
+                    style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                  />
+                  <span onClick={voltarParaListaRelato} style={{ fontSize: '9px', color: '#4C3A8F', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'flex-start' }}>← voltar pra lista</span>
+                </div>
+              )}
+
+              <select value={relatoDiaSemana} onChange={(e) => setRelatoDiaSemana(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                <option value="">Dia da semana...</option>
+                {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
+              </select>
+
+              <select value={relatoHorario} onChange={(e) => setRelatoHorario(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                <option value="">Horário...</option>
+                {HORARIOS_RELATO.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+
+              <select value={relatoTipo} onChange={(e) => setRelatoTipo(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                <option value="">O que aconteceu?</option>
+                <option value="sem_aba">Está sem ABA no TITA</option>
+                <option value="perdeu_sessao">Não possui mais essa sessão</option>
+              </select>
+
+              <textarea
+                value={relatoObservacao}
+                onChange={(e) => setRelatoObservacao(e.target.value)}
+                placeholder="Observação (opcional)"
+                rows={2}
+                style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)', resize: 'vertical' }}
+              />
+
+              <MinecraftButton
+                onClick={handleEnviarRelato}
+                disabled={
+                  enviandoRelato ||
+                  (!relatoModoManual && !relatoAssistidoEscolhido) ||
+                  (relatoModoManual && !relatoAssistidoManual.trim()) ||
+                  !relatoDiaSemana || !relatoHorario || !relatoTipo
+                }
+              >
+                {enviandoRelato ? 'Enviando...' : 'Enviar Relato'}
+              </MinecraftButton>
+
+              {mensagemRelato && (
+                <p style={{ color: mensagemRelato.ok ? '#1d5930' : '#a83232', fontSize: '11px', textAlign: 'center', margin: 0, fontFamily: '"Press Start 2P", monospace' }}>
+                  {mensagemRelato.texto}
+                </p>
+              )}
+            </div>
+          )}
+        </MinecraftPanel>
       </div>
 
       {/* ========================================== */}
@@ -537,6 +860,102 @@ export default function AppAplicadores() {
                       ? `Tem certeza? Clique de novo (${selecionadosRemocao.length})`
                       : `Confirmar remoção (${selecionadosRemocao.length})`}
                 </MinecraftButton>
+              </div>
+            )}
+          </MinecraftPanel>
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* RELATOS DE SESSÃO SEM ABA — VISÃO DA COORDENAÇÃO */}
+      {/* ================================================= */}
+      {isCoordenacao && (
+        <div style={{ width: '100%', marginBottom: '20px' }}>
+          <MinecraftPanel title="Relatos de Sessão sem ABA">
+            <div
+              onClick={() => setMostrarPainelRelatos(!mostrarPainelRelatos)}
+              style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
+            >
+              {mostrarPainelRelatos ? '▼' : '▶'} Ver relatos enviados
+            </div>
+
+            {mostrarPainelRelatos && (
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+                {/* Filtros */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <select value={filtroRelatoDia} onChange={(e) => setFiltroRelatoDia(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                    <option value="">Todos os dias</option>
+                    {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
+                  </select>
+                  <select value={filtroRelatoTipo} onChange={(e) => setFiltroRelatoTipo(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                    <option value="">Todos os tipos</option>
+                    <option value="sem_aba">Está sem ABA no TITA</option>
+                    <option value="perdeu_sessao">Não possui mais essa sessão</option>
+                  </select>
+                </div>
+
+                {carregandoRelatos && (
+                  <p style={{ textAlign: 'center', fontSize: '10px', color: '#555', margin: 0 }}>Carregando...</p>
+                )}
+
+                {!carregandoRelatos && relatos.length === 0 && (
+                  <p style={{ textAlign: 'center', fontSize: '11px', color: '#555', margin: '10px 0', fontFamily: '"Press Start 2P", monospace' }}>
+                    Nenhum relato encontrado 🎉
+                  </p>
+                )}
+
+                {!carregandoRelatos && relatos.length > 0 && (
+                  <>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <MinecraftButton onClick={handleToggleModoRemocaoRelatos} style={{ fontSize: '9px', padding: '8px 10px' }}>
+                        {modoRemocaoRelatos ? 'Cancelar remoção' : 'Modo de remoção'}
+                      </MinecraftButton>
+                      {modoRemocaoRelatos && (
+                        <MinecraftButton onClick={handleToggleSelecionarTodosRelatos} style={{ fontSize: '9px', padding: '8px 10px' }}>
+                          {selecionadosRelatos.length === relatos.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                        </MinecraftButton>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {relatos.map((r) => (
+                        <label
+                          key={r.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: r.tipo === 'sem_aba' ? '#ffd8a8' : '#ffc9c9', border: '2px solid #555', cursor: modoRemocaoRelatos ? 'pointer' : 'default', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#000' }}
+                        >
+                          {modoRemocaoRelatos && (
+                            <input
+                              type="checkbox"
+                              checked={selecionadosRelatos.includes(r.id)}
+                              onChange={() => toggleSelecaoRelato(r.id)}
+                              style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                            />
+                          )}
+                          <span style={{ lineHeight: '1.6' }}>
+                            {r.assistido} <span style={{ color: '#333' }}>— {capitalizar(r.dia_semana)}, {r.horario}</span><br />
+                            <span style={{ color: '#4C3A8F' }}>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</span> · <span style={{ color: '#555' }}>relatado por {r.aplicador}</span>
+                            {r.observacao && <><br /><span style={{ color: '#555' }}>Obs: {r.observacao}</span></>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {modoRemocaoRelatos && (
+                      <MinecraftButton
+                        onClick={handleClickConfirmarRemocaoRelatos}
+                        disabled={carregandoRemocaoRelatos || selecionadosRelatos.length === 0}
+                        style={confirmandoRemocaoRelatos ? { backgroundColor: '#a83232', color: '#fff' } : undefined}
+                      >
+                        {carregandoRemocaoRelatos
+                          ? 'Removendo...'
+                          : confirmandoRemocaoRelatos
+                            ? `Tem certeza? Clique de novo (${selecionadosRelatos.length})`
+                            : `Remover selecionados (${selecionadosRelatos.length})`}
+                      </MinecraftButton>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </MinecraftPanel>
