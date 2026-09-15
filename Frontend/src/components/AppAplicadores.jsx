@@ -38,7 +38,6 @@ export default function AppAplicadores() {
 
   // GESTÃO DE USUÁRIOS/LOGINS (coordenação)
   const [usuarios, setUsuarios] = useState([]);
-  const [mostrarGerenciarUsuarios, setMostrarGerenciarUsuarios] = useState(false);
   const [novoNome, setNovoNome] = useState('');
   const [novoLogin, setNovoLogin] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
@@ -46,6 +45,10 @@ export default function AppAplicadores() {
   const [carregandoUsuario, setCarregandoUsuario] = useState(false);
   const [erroUsuario, setErroUsuario] = useState('');
   const [removendoLogin, setRemovendoLogin] = useState('');
+
+  // GRUPO 3: painel "Gerenciar Aplicadores" escondido atrás de um ícone de
+  // engrenagem no canto inferior direito, aberto como um modal por cima da tela
+  const [gearMenuAberto, setGearMenuAberto] = useState(false);
 
   // EDIÇÃO DE USUÁRIO EXISTENTE (coordenação)
   const [loginEmEdicao, setLoginEmEdicao] = useState('');
@@ -541,20 +544,26 @@ export default function AppAplicadores() {
       )}
 
       {/* ================================================= */}
-      {/* GESTÃO DE USUÁRIOS/LOGINS (coordenação) */}
+      {/* GRUPO 3: GESTÃO DE USUÁRIOS/LOGINS atrás de engrenagem (coordenação) */}
       {/* ================================================= */}
-      {isCoordenacao && (
-        <div style={{ width: '100%', marginBottom: '20px' }}>
-          <MinecraftPanel title="Gerenciar Aplicadores">
-            <div
-              onClick={() => setMostrarGerenciarUsuarios(!mostrarGerenciarUsuarios)}
-              style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
-            >
-              {mostrarGerenciarUsuarios ? '▼' : '▶'} {usuarios.length} usuário(s) cadastrado(s)
-            </div>
+      {isCoordenacao && gearMenuAberto && (
+        <div
+          onClick={() => setGearMenuAberto(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '20px', boxSizing: 'border-box' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '500px', marginTop: '30px' }}
+          >
+            <MinecraftPanel title="Gerenciar Aplicadores">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff' }}>
+                  {usuarios.length} usuário(s) cadastrado(s)
+                </span>
+                <MinecraftButton onClick={() => setGearMenuAberto(false)} style={{ fontSize: '9px', padding: '6px 10px' }}>Fechar ✕</MinecraftButton>
+              </div>
 
-            {mostrarGerenciarUsuarios && (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
                 {/* Formulário de criação */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -594,9 +603,35 @@ export default function AppAplicadores() {
                   ))}
                 </div>
               </div>
-            )}
-          </MinecraftPanel>
+            </MinecraftPanel>
+          </div>
         </div>
+      )}
+
+      {/* GRUPO 3: ícone de engrenagem fixo no canto inferior direito */}
+      {isCoordenacao && (
+        <button
+          onClick={() => setGearMenuAberto(true)}
+          aria-label="Gerenciar Aplicadores"
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            width: '54px',
+            height: '54px',
+            fontSize: '24px',
+            lineHeight: '1',
+            backgroundColor: '#C6C6C6',
+            border: '2px solid',
+            borderColor: '#fff #555 #555 #fff',
+            boxShadow: '2px 2px 0px rgba(0,0,0,0.4)',
+            cursor: 'pointer',
+            zIndex: 998,
+            imageRendering: 'pixelated',
+          }}
+        >
+          ⚙️
+        </button>
       )}
 
       {/* ========================================== */}
