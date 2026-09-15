@@ -414,7 +414,7 @@ export default function AppAplicadores() {
                 <textarea
                   value={textoBulk}
                   onChange={(e) => setTextoBulk(e.target.value)}
-                  placeholder={"08/09/2026;09:00;AFONSO DIONISIO;ALICIA VITÓRIA;\n09/09/2026;14:30;CALEB SANTOS;AMANDA ALVES;"}
+                  placeholder={"08/09/2026;09:00;LUCAS EDUARDO;ALICIA VITÓRIA;\n09/09/2026;14:30;GABRIEL NOVAES;VINICIUS GOMES;"}
                   rows={5}
                   style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)', resize: 'vertical' }}
                 />
