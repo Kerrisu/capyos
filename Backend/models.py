@@ -106,3 +106,27 @@ class UsuarioResponse(BaseModel):
 
 class UsuarioRemoveResponse(BaseModel):
     mensagem: str
+
+
+# --- NOVOS MODELOS: RELATOS DE SESSÃO SEM ABA NO TITA ---
+
+DIAS_SEMANA_VALIDOS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado"]
+HORARIOS_VALIDOS = ["13:15", "14:00", "14:45", "15:30", "16:15", "17:00", "17:45"]
+TIPOS_RELATO_VALIDOS = ["sem_aba", "perdeu_sessao"]  # "Está sem ABA no TITA" / "Não possui mais essa sessão"
+
+class RelatoAbaCreateRequest(BaseModel):
+    assistido: str
+    dia_semana: str
+    horario: str
+    tipo: str
+    observacao: Optional[str] = None
+
+class RelatoAbaResponse(BaseModel):
+    id: int
+    assistido: str
+    dia_semana: str
+    horario: str
+    tipo: str
+    observacao: Optional[str]
+    aplicador: str
+    data_criacao: str

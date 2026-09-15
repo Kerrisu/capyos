@@ -25,6 +25,8 @@ from models import (
     LoginRequest, TokenResponse, PendenciaResponse, PendenciaUpdateRequest,
     PendenciaBulkRequest, PendenciaBulkResponse, RemocaoLoteRequest, RemocaoLoteResponse,
     UsuarioCreateRequest, UsuarioResponse, UsuarioRemoveResponse,
+    RelatoAbaCreateRequest, RelatoAbaResponse,
+    DIAS_SEMANA_VALIDOS, HORARIOS_VALIDOS, TIPOS_RELATO_VALIDOS,
 )
 
 # Configurações de Segurança e JWT
@@ -716,6 +718,63 @@ def remover_usuario(login_alvo: str, usuario: dict = Depends(obter_usuario_logad
     print(f"{DEBUG_TAG} Usuário '{login_alvo}' removido por {usuario.get('nome')}")
 
     return UsuarioRemoveResponse(mensagem=f"Usuário '{login_alvo}' removido com sucesso.")
+
+
+# ==========================================
+# RELATOS DE SESSÃO SEM ABA NO TITA
+# ==========================================
+
+@app.post("/relatos-aba", response_model=RelatoAbaResponse)
+def criar_relato_aba(request: RelatoAbaCreateRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """
+    Registra que um assistido está sem ABA no TITA num dia/horário fixo (perdeu
+    a sessão que já existia, ou nunca teve o registro apesar da sessão real
+    acontecer). Aberto a qualquer usuário logado (aplicador ou coordenação).
+    """
+    if request.dia_semana not in DIAS_SEMANA_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Dia da semana inválido. Use um de: {', '.join(DIAS_SEMANA_VALIDOS)}.")
+    if request.horario not in HORARIOS_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Horário inválido. Use um de: {', '.join(HORARIOS_VALIDOS)}.")
+    if request.tipo not in TIPOS_RELATO_VALIDOS:
+        raise HTTPException(status_code=400, detail=f"Tipo inválido. Use um de: {', '.join(TIPOS_RELATO_VALIDOS)}.")
+    if not request.assistido.strip():
+        raise HTTPException(status_code=400, detail="Nome do assistido não pode ficar vazio.")
+
+    novo_relato = database.inserir_relato_aba(
+        assistido=request.assistido.strip().upper(),
+        dia_semana=request.dia_semana,
+        horario=request.horario,
+        tipo=request.tipo,
+        observacao=(request.observacao.strip() if request.observacao and request.observacao.strip() else None),
+        aplicador=usuario.get("nome"),
+    )
+    print(f"{DEBUG_TAG} Relato de sem-ABA criado por {usuario.get('nome')}: {novo_relato}")
+
+    return novo_relato
+
+
+@app.get("/relatos-aba", response_model=List[RelatoAbaResponse])
+def listar_relatos_aba(dia_semana: Optional[str] = None, tipo: Optional[str] = None, usuario: dict = Depends(obter_usuario_logado)):
+    """Lista os relatos de sessão sem ABA, com filtros opcionais de dia da semana
+    e tipo. Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode ver os relatos.")
+
+    return database.listar_relatos_aba_db(dia_semana=dia_semana, tipo=tipo)
+
+
+@app.delete("/relatos-aba/lote", response_model=RemocaoLoteResponse)
+def remover_relatos_aba_em_lote_rota(request: RemocaoLoteRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """Remove definitivamente os relatos selecionados, depois que a coordenação já
+    fez os ajustes necessários no TITA. Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode remover relatos.")
+
+    removidos = database.remover_relatos_aba_em_lote(request.ids)
+    print(f"{DEBUG_TAG} Remoção em lote de relatos-aba: {removidos} (por {usuario.get('nome')})")
+
+    return RemocaoLoteResponse(removidos=removidos)
+
 
 # ==========================================
 # ROTA TEMPORÁRIA: INJETAR TITAS DE TESTE

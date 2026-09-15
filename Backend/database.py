@@ -87,6 +87,19 @@ def criar_tabelas():
                 );
             """)
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS relatos_aba (
+                    id SERIAL PRIMARY KEY,
+                    assistido VARCHAR(255) NOT NULL,
+                    dia_semana VARCHAR(20) NOT NULL,
+                    horario VARCHAR(10) NOT NULL,
+                    tipo VARCHAR(30) NOT NULL, -- 'sem_aba' ou 'perdeu_sessao'
+                    observacao TEXT,
+                    aplicador VARCHAR(255) NOT NULL,
+                    data_criacao TIMESTAMP NOT NULL DEFAULT NOW()
+                );
+            """)
+
             # ====================================================
             # 2. CRIANDO AS TABELAS ANTIGAS DO CAPYOS
             # ====================================================
@@ -419,6 +432,75 @@ def remover_pendencias_em_lote(ids: list[int]) -> int:
             cur.execute("""
                 DELETE FROM pendencias
                 WHERE id = ANY(%s) AND feito = TRUE;
+            """, (ids,))
+            linhas_removidas = cur.rowcount
+        conn.commit()
+        return linhas_removidas
+    finally:
+        conn.close()
+
+
+def inserir_relato_aba(assistido: str, dia_semana: str, horario: str, tipo: str, observacao, aplicador: str) -> dict:
+    """Registra um relato de sessão sem ABA no TITA (perdeu a sessão ou nunca teve)."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                INSERT INTO relatos_aba (assistido, dia_semana, horario, tipo, observacao, aplicador)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id, assistido, dia_semana, horario, tipo, observacao, aplicador, data_criacao;
+            """, (assistido, dia_semana, horario, tipo, observacao, aplicador))
+            linha = dict(cur.fetchone())
+        conn.commit()
+        linha["data_criacao"] = linha["data_criacao"].isoformat()
+        return linha
+    finally:
+        conn.close()
+
+
+def listar_relatos_aba_db(dia_semana: str = None, tipo: str = None) -> list[dict]:
+    """Lista os relatos de sessão sem ABA, mais recentes primeiro, com filtros opcionais."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            condicoes = []
+            parametros = []
+            if dia_semana:
+                condicoes.append("dia_semana = %s")
+                parametros.append(dia_semana)
+            if tipo:
+                condicoes.append("tipo = %s")
+                parametros.append(tipo)
+            where = f"WHERE {' AND '.join(condicoes)}" if condicoes else ""
+            cur.execute(f"""
+                SELECT id, assistido, dia_semana, horario, tipo, observacao, aplicador, data_criacao
+                FROM relatos_aba
+                {where}
+                ORDER BY data_criacao DESC;
+            """, parametros)
+            linhas = cur.fetchall()
+        resultado = []
+        for linha in linhas:
+            item = dict(linha)
+            item["data_criacao"] = item["data_criacao"].isoformat()
+            resultado.append(item)
+        return resultado
+    finally:
+        conn.close()
+
+
+def remover_relatos_aba_em_lote(ids: list[int]) -> int:
+    """Remove definitivamente os relatos selecionados (depois que a coordenação já
+    fez os ajustes necessários no TITA). Retorna quantas linhas foram removidas."""
+    if not ids:
+        return 0
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM relatos_aba
+                WHERE id = ANY(%s);
             """, (ids,))
             linhas_removidas = cur.rowcount
         conn.commit()
