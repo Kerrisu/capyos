@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MinecraftButton from './MinecraftButton';
 import MinecraftPanel from './MinecraftPanel';
 import Capybara from './Capybara';
@@ -29,6 +29,12 @@ export default function AppAplicadores() {
   const [selecionadosRemocao, setSelecionadosRemocao] = useState([]);
   const [carregandoRemocao, setCarregandoRemocao] = useState(false);
   const [mostrarFilaAprovacao, setMostrarFilaAprovacao] = useState(false);
+  // GRUPO 2: confirmação dupla antes de remover em lote (arma no 1º clique, executa no 2º)
+  const [confirmandoRemocaoLote, setConfirmandoRemocaoLote] = useState(false);
+  const confirmarRemocaoTimeoutRef = useRef(null);
+
+  // GRUPO 2: busca por aplicador na Lista de Titas
+  const [buscaAplicador, setBuscaAplicador] = useState('');
 
   // GESTÃO DE USUÁRIOS/LOGINS (coordenação)
   const [usuarios, setUsuarios] = useState([]);
@@ -172,8 +178,17 @@ export default function AppAplicadores() {
   // PONTO 2: FILA DE APROVAÇÃO / REMOÇÃO EM LOTE
   // ==========================================
   const toggleSelecaoRemocao = (id) => {
+    setConfirmandoRemocaoLote(false); // mudou a seleção, exige confirmar de novo
     setSelecionadosRemocao(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // GRUPO 2: botão "selecionar tudo" / "desmarcar tudo" na Fila de Aprovação
+  const handleToggleSelecionarTodos = () => {
+    setConfirmandoRemocaoLote(false);
+    setSelecionadosRemocao(prev =>
+      prev.length === pendenciasParaAprovacao.length ? [] : pendenciasParaAprovacao.map(p => p.id)
     );
   };
 
@@ -199,7 +214,21 @@ export default function AppAplicadores() {
       console.error("Erro ao confirmar remoção em lote:", err);
     } finally {
       setCarregandoRemocao(false);
+      setConfirmandoRemocaoLote(false);
     }
+  };
+
+  // GRUPO 2: confirmação dupla — 1º clique arma o botão (com aviso e timeout de
+  // 4s pra desarmar sozinho), 2º clique dentro da janela realmente remove
+  const handleClickConfirmarRemocao = () => {
+    if (!confirmandoRemocaoLote) {
+      setConfirmandoRemocaoLote(true);
+      if (confirmarRemocaoTimeoutRef.current) clearTimeout(confirmarRemocaoTimeoutRef.current);
+      confirmarRemocaoTimeoutRef.current = setTimeout(() => setConfirmandoRemocaoLote(false), 4000);
+      return;
+    }
+    if (confirmarRemocaoTimeoutRef.current) clearTimeout(confirmarRemocaoTimeoutRef.current);
+    handleConfirmarRemocao();
   };
 
   // ==========================================
@@ -313,6 +342,25 @@ export default function AppAplicadores() {
   const toggleGrupo = (aplicador) => {
     setGruposAbertos(prev => ({ ...prev, [aplicador]: !grupoEstaAberto(aplicador) }));
   };
+
+  // GRUPO 2: abrir/fechar todos os dropdowns de aplicador de uma vez
+  const nomesAplicadores = Object.keys(pendenciasAgrupadas);
+  const algumGrupoFechado = nomesAplicadores.some(ap => !grupoEstaAberto(ap));
+
+  const toggleTodosGrupos = () => {
+    const abrirTodos = algumGrupoFechado; // se tem algum fechado, essa ação abre todos; senão fecha todos
+    const atualizado = {};
+    nomesAplicadores.forEach(ap => { atualizado[ap] = abrirTodos; });
+    setGruposAbertos(atualizado);
+  };
+
+  // GRUPO 2: busca por aplicador (ignora acento e maiúscula/minúscula)
+  const normalizarTexto = (str) =>
+    str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  const aplicadoresFiltrados = nomesAplicadores.filter(ap =>
+    normalizarTexto(ap).includes(normalizarTexto(buscaAplicador))
+  );
 
   const textoDiasPendente = (dias) => {
     if (dias <= 0) return 'pendente hoje';
@@ -448,7 +496,7 @@ export default function AppAplicadores() {
         <div style={{ width: '100%', marginBottom: '20px' }}>
           <MinecraftPanel title="Fila de Aprovação">
             <div
-              onClick={() => setMostrarFilaAprovacao(!mostrarFilaAprovacao)}
+              onClick={() => { setMostrarFilaAprovacao(!mostrarFilaAprovacao); setConfirmandoRemocaoLote(false); }}
               style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
             >
               {mostrarFilaAprovacao ? '▼' : '▶'} {pendenciasParaAprovacao.length} tita(s) aguardando remoção
@@ -456,6 +504,9 @@ export default function AppAplicadores() {
 
             {mostrarFilaAprovacao && (
               <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <MinecraftButton onClick={handleToggleSelecionarTodos} style={{ fontSize: '9px', padding: '8px 10px', alignSelf: 'flex-start' }}>
+                  {selecionadosRemocao.length === pendenciasParaAprovacao.length ? 'Desmarcar todos' : 'Selecionar todos'}
+                </MinecraftButton>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {pendenciasParaAprovacao.map((p) => (
                     <label
@@ -472,8 +523,16 @@ export default function AppAplicadores() {
                     </label>
                   ))}
                 </div>
-                <MinecraftButton onClick={handleConfirmarRemocao} disabled={carregandoRemocao || selecionadosRemocao.length === 0}>
-                  {carregandoRemocao ? 'Removendo...' : `Confirmar remoção (${selecionadosRemocao.length})`}
+                <MinecraftButton
+                  onClick={handleClickConfirmarRemocao}
+                  disabled={carregandoRemocao || selecionadosRemocao.length === 0}
+                  style={confirmandoRemocaoLote ? { backgroundColor: '#a83232', color: '#fff' } : undefined}
+                >
+                  {carregandoRemocao
+                    ? 'Removendo...'
+                    : confirmandoRemocaoLote
+                      ? `Tem certeza? Clique de novo (${selecionadosRemocao.length})`
+                      : `Confirmar remoção (${selecionadosRemocao.length})`}
                 </MinecraftButton>
               </div>
             )}
@@ -552,8 +611,28 @@ export default function AppAplicadores() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
 
+              {/* GRUPO 2: busca por aplicador + abrir/fechar todos os dropdowns */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar aplicador..."
+                  value={buscaAplicador}
+                  onChange={(e) => setBuscaAplicador(e.target.value)}
+                  style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                />
+                <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                  {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
+                </MinecraftButton>
+              </div>
+
+              {aplicadoresFiltrados.length === 0 && (
+                <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: '"Press Start 2P", monospace' }}>
+                  Nenhum aplicador encontrado
+                </p>
+              )}
+
               {/* RENDERIZAÇÃO CATEGORIZADA POR APLICADOR */}
-              {Object.keys(pendenciasAgrupadas).map((aplicador) => {
+              {aplicadoresFiltrados.map((aplicador) => {
                 const listaOrdenada = ordenarPendenciasDoAplicador(pendenciasAgrupadas[aplicador]);
                 const totalPendentes = listaOrdenada.filter(p => !p.feito).length;
                 const aberto = grupoEstaAberto(aplicador);
