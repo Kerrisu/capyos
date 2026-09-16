@@ -34,7 +34,10 @@ body {
      de repetir — a moldura de quebra-cabeça só existe no topo, então
      repetir faria ela aparecer duplicada no meio da tela. */
   background-color: var(--mc-sky-bottom);
-  background-image: url('../assets/bg_capyos.png');
+  /* Imagem de fundo com a opacidade reduzida em 75%: um overlay na cor do
+     céu do tema (var(--mc-sky-top)) a 75% de opacidade fica por cima da
+     imagem, deixando só 25% dela visível, sem lavar pra branco/preto. */
+  background-image: linear-gradient(rgba(126, 192, 238, 0.75), rgba(126, 192, 238, 0.75)), url('../assets/bg_capyos.png');
   background-size: cover;
   background-position: top center;
   background-repeat: no-repeat;
