@@ -18,10 +18,20 @@ export async function apiFetch(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
   console.log(`${DEBUG_TAG} Chamando: ${options.method || "GET"} ${url}`);
 
+  // Manda o token de login (mesma chave usada pelo AppAplicadores) em toda
+  // chamada, quando existir. Desde a unificação de "/" e "/aplicador" num
+  // login só, as rotas de Salas (gerar-escala, pacientes, configurações
+  // gerais) também exigem autenticação no backend.
+  const token = localStorage.getItem('capy_token');
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   let resposta;
   try {
     resposta = await fetch(url, {
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      headers,
       ...options,
     });
   } catch (erroDeRede) {
