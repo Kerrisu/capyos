@@ -220,12 +220,16 @@ def inspecionar_cores_planilha(url: str, nome_aba: str):
 
 
 @app.post("/gerar-escala", response_model=GerarEscalaResponse)
-def gerar_escala(request: GerarEscalaRequest):
+def gerar_escala(request: GerarEscalaRequest, usuario: dict = Depends(obter_usuario_logado)):
     """
     Roda o pipeline completo: baixa a planilha, identifica os pacientes
     (por cor), distribui nas salas seguindo as regras salvas no banco
     e devolve tanto os dados estruturados quanto o texto pronto pra WhatsApp.
+    Restrito à coordenação (única que usa o Direcionamento de Salas).
     """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode gerar escala.")
+
     print(f"{DEBUG_TAG} Rota /gerar-escala chamada. nome_aba={request.nome_aba}")
 
     try:
@@ -284,11 +288,11 @@ class FormatarEscalaResponse(BaseModel):
 
 
 @app.post("/formatar-escala", response_model=FormatarEscalaResponse)
-def formatar_escala(request: FormatarEscalaRequest):
+def formatar_escala(request: FormatarEscalaRequest, usuario: dict = Depends(obter_usuario_logado)):
     """
     Recebe um mapa de salas (por exemplo, já editado manualmente no
     frontend depois da tela de alocação de pacientes sem sala) e devolve
-    o texto pronto pra WhatsApp.
+    o texto pronto pra WhatsApp. Restrito à coordenação.
 
     IMPORTANTE: reaproveita a MESMA função `formatar_mapa_para_texto` usada
     em /gerar-escala, em vez de ter uma segunda implementação em
@@ -296,6 +300,9 @@ def formatar_escala(request: FormatarEscalaRequest):
     causou o bug do horário de 17:00H (duas normalizações ligeiramente
     diferentes que um dia saíram de sincronia uma da outra).
     """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode formatar escala.")
+
     print(f"{DEBUG_TAG} Rota /formatar-escala chamada. {len(request.nao_alocados)} pacientes sem sala.")
 
     try:
@@ -334,14 +341,17 @@ class EscreverVacanciaResponse(BaseModel):
 
 
 @app.post("/escrever-vacancia", response_model=EscreverVacanciaResponse)
-def escrever_vacancia_rota(request: EscreverVacanciaRequest):
+def escrever_vacancia_rota(request: EscreverVacanciaRequest, usuario: dict = Depends(obter_usuario_logado)):
     """
     Escreve o mapa de alocação (já gerado por /gerar-escala, possivelmente
     ajustado manualmente pelo coordenador na tela de alocação) direto na
     aba do dia correspondente da planilha de Vacância — substitui o fluxo
     antigo de "Copiar Vacância", que só copiava texto pra área de
-    transferência.
+    transferência. Restrito à coordenação.
     """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode escrever na Vacância.")
+
     print(f"{DEBUG_TAG} Rota /escrever-vacancia chamada. aba={request.nome_aba}")
 
     try:
@@ -368,8 +378,10 @@ def escrever_vacancia_rota(request: EscreverVacanciaRequest):
 # --- ROTAS DE GERENCIAMENTO DE PACIENTES ---
 
 @app.get("/pacientes")
-def listar_pacientes():
-    """Lista todos os assistidos cadastrados no banco."""
+def listar_pacientes(usuario: dict = Depends(obter_usuario_logado)):
+    """Lista todos os assistidos cadastrados no banco. Qualquer usuário
+    logado pode ler (também usado no dropdown de busca de assistido do
+    módulo de Relatos de Sessão sem ABA)."""
     print(f"{DEBUG_TAG} Rota GET /pacientes chamada.")
     try:
         pacientes = database.listar_pacientes_dict()
@@ -380,8 +392,9 @@ def listar_pacientes():
 
 
 @app.get("/pacientes/{nome}")
-def buscar_paciente(nome: str):
-    """Busca um assistido específico pelo nome (case-insensitive)."""
+def buscar_paciente(nome: str, usuario: dict = Depends(obter_usuario_logado)):
+    """Busca um assistido específico pelo nome (case-insensitive). Qualquer
+    usuário logado pode ler."""
     nome_normalizado = nome.strip().upper()
     print(f"{DEBUG_TAG} Rota GET /pacientes/{{nome}} chamada. nome={nome_normalizado}")
 
@@ -398,13 +411,16 @@ def buscar_paciente(nome: str):
 
 
 @app.post("/pacientes")
-def cadastrar_ou_editar_paciente(request: PacienteUpsertRequest):
+def cadastrar_ou_editar_paciente(request: PacienteUpsertRequest, usuario: dict = Depends(obter_usuario_logado)):
     """
     Cadastra um assistido novo ou atualiza um existente (upsert).
     Se o nome já existir no banco, sobrescreve a configuração dele.
     Se não existir, cria um registro novo. Só mexe nessa linha — não
-    afeta os demais assistidos.
+    afeta os demais assistidos. Restrito à coordenação.
     """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode cadastrar/editar assistidos.")
+
     nome_normalizado = request.nome.strip().upper()
     print(f"{DEBUG_TAG} Rota POST /pacientes chamada. nome={nome_normalizado}")
 
@@ -426,8 +442,11 @@ def cadastrar_ou_editar_paciente(request: PacienteUpsertRequest):
 
 
 @app.delete("/pacientes/{nome}")
-def remover_paciente(nome: str):
-    """Remove um assistido do banco (ex: saída do caseload)."""
+def remover_paciente(nome: str, usuario: dict = Depends(obter_usuario_logado)):
+    """Remove um assistido do banco (ex: saída do caseload). Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode remover assistidos.")
+
     nome_normalizado = nome.strip().upper()
     print(f"{DEBUG_TAG} Rota DELETE /pacientes/{{nome}} chamada. nome={nome_normalizado}")
 
@@ -451,12 +470,16 @@ def remover_paciente(nome: str):
 # Ponto 4.3) poder ler e editar sem precisar mexer direto no Neon via SQL.
 
 @app.get("/configuracoes-gerais", response_model=ConfiguracoesGerais)
-def obter_configuracoes_gerais_rota():
+def obter_configuracoes_gerais_rota(usuario: dict = Depends(obter_usuario_logado)):
     """
     Devolve a linha única (id=1) de configuracoes_gerais. Se a linha ainda
     não existir por algum motivo, devolve os defaults do modelo em vez de
     erro — a tela de configurações sempre tem algo pra mostrar/editar.
+    Restrito à coordenação (inclui a URL da planilha de Vacância).
     """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode ver as configurações gerais.")
+
     print(f"{DEBUG_TAG} Rota GET /configuracoes-gerais chamada.")
 
     try:
@@ -468,13 +491,17 @@ def obter_configuracoes_gerais_rota():
 
 
 @app.put("/configuracoes-gerais", response_model=ConfiguracoesGerais)
-def salvar_configuracoes_gerais_rota(request: ConfiguracoesGerais):
+def salvar_configuracoes_gerais_rota(request: ConfiguracoesGerais, usuario: dict = Depends(obter_usuario_logado)):
     """
     Substitui a linha inteira de configuracoes_gerais (id=1) pelo payload
     recebido. Sempre manda o objeto completo — não é um patch parcial,
     então o frontend precisa buscar (GET), editar em memória e mandar
     tudo de volta (PUT), igual o resto do CapyOS já faz com pacientes.
+    Restrito à coordenação.
     """
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode salvar as configurações gerais.")
+
     print(f"{DEBUG_TAG} Rota PUT /configuracoes-gerais chamada.")
 
     try:
