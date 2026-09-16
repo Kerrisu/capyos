@@ -16,6 +16,9 @@ export default function AppAplicadores() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
+  // ITEM 5/6/7: navegação em estilo menu (igual o CapyOS de alocação de salas)
+  const [tela, setTela] = useState('home'); // home | titas | relatar-aba | cadastro-massa | relatos-aba | gerenciar-usuarios
+
   // PONTO 3: controle de dropdown aberto/fechado por aplicador (aberto por padrão)
   const [gruposAbertos, setGruposAbertos] = useState({});
 
@@ -23,17 +26,15 @@ export default function AppAplicadores() {
   const [textoBulk, setTextoBulk] = useState('');
   const [carregandoBulk, setCarregandoBulk] = useState(false);
   const [resultadoBulk, setResultadoBulk] = useState(null);
-  const [mostrarCadastroBulk, setMostrarCadastroBulk] = useState(false);
 
   // FILA DE APROVAÇÃO DE REMOÇÃO (coordenação)
   const [selecionadosRemocao, setSelecionadosRemocao] = useState([]);
   const [carregandoRemocao, setCarregandoRemocao] = useState(false);
-  const [mostrarFilaAprovacao, setMostrarFilaAprovacao] = useState(false);
   // GRUPO 2: confirmação dupla antes de remover em lote (arma no 1º clique, executa no 2º)
   const [confirmandoRemocaoLote, setConfirmandoRemocaoLote] = useState(false);
   const confirmarRemocaoTimeoutRef = useRef(null);
 
-  // GRUPO 2: busca por aplicador na Lista de Titas
+  // GRUPO 2: busca por aplicador na Lista de Titas (só coordenação, item 1 das novas sugestões)
   const [buscaAplicador, setBuscaAplicador] = useState('');
 
   // GESTÃO DE USUÁRIOS/LOGINS (coordenação)
@@ -46,15 +47,13 @@ export default function AppAplicadores() {
   const [erroUsuario, setErroUsuario] = useState('');
   const [removendoLogin, setRemovendoLogin] = useState('');
 
-  // GRUPO 3: painel "Gerenciar Aplicadores" escondido atrás de um ícone de
-  // engrenagem no canto inferior direito, aberto como um modal por cima da tela
-  const [gearMenuAberto, setGearMenuAberto] = useState(false);
+  // GRUPO 3: painel "Gerenciar Aplicadores" agora é uma tela do menu (item 6)
+  // (antes era um modal atrás de um ícone de engrenagem)
 
   // RELATOS DE SESSÃO SEM ABA NO TITA (aberto a aplicador + coordenação)
   const DIAS_SEMANA_RELATO = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
   const HORARIOS_RELATO = ['13:15', '14:00', '14:45', '15:30', '16:15', '17:00', '17:45'];
 
-  const [mostrarPainelRelatar, setMostrarPainelRelatar] = useState(false);
   const [listaAssistidos, setListaAssistidos] = useState([]);
   const [relatoBuscaAssistido, setRelatoBuscaAssistido] = useState('');
   const [relatoAssistidoEscolhido, setRelatoAssistidoEscolhido] = useState('');
@@ -62,14 +61,14 @@ export default function AppAplicadores() {
   const [relatoModoManual, setRelatoModoManual] = useState(false);
   const [relatoAssistidoManual, setRelatoAssistidoManual] = useState('');
   const [relatoDiaSemana, setRelatoDiaSemana] = useState('');
-  const [relatoHorario, setRelatoHorario] = useState('');
+  // item 2 das novas sugestões: agora é multi-seleção (checkbox), um relato por horário marcado
+  const [relatoHorarios, setRelatoHorarios] = useState([]);
   const [relatoTipo, setRelatoTipo] = useState('');
   const [relatoObservacao, setRelatoObservacao] = useState('');
   const [enviandoRelato, setEnviandoRelato] = useState(false);
   const [mensagemRelato, setMensagemRelato] = useState(null); // { ok: bool, texto: string }
 
   // PAINEL DA COORDENAÇÃO: ver/filtrar/remover relatos
-  const [mostrarPainelRelatos, setMostrarPainelRelatos] = useState(false);
   const [relatos, setRelatos] = useState([]);
   const [carregandoRelatos, setCarregandoRelatos] = useState(false);
   const [filtroRelatoDia, setFiltroRelatoDia] = useState('');
@@ -377,48 +376,66 @@ export default function AppAplicadores() {
     setRelatoModoManual(false);
     setRelatoAssistidoManual('');
     setRelatoDiaSemana('');
-    setRelatoHorario('');
+    setRelatoHorarios([]);
     setRelatoTipo('');
     setRelatoObservacao('');
   };
 
+  // item 2 das novas sugestões: horário agora é multi-seleção
+  const toggleRelatoHorario = (h) => {
+    setRelatoHorarios(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
+  };
+
   const handleEnviarRelato = async () => {
     const assistidoFinal = relatoModoManual ? relatoAssistidoManual.trim() : relatoAssistidoEscolhido;
-    if (!assistidoFinal || !relatoDiaSemana || !relatoHorario || !relatoTipo) return;
+    if (!assistidoFinal || !relatoDiaSemana || relatoHorarios.length === 0 || !relatoTipo) return;
 
     setEnviandoRelato(true);
     setMensagemRelato(null);
 
-    try {
-      const response = await fetch(`${API_URL}/relatos-aba`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          assistido: assistidoFinal,
-          dia_semana: relatoDiaSemana,
-          horario: relatoHorario,
-          tipo: relatoTipo,
-          observacao: relatoObservacao.trim() || null,
-        })
-      });
+    // Um relato por horário marcado (ex: assistido perdeu duas abas no mesmo dia)
+    let sucesso = 0;
+    const erros = [];
 
-      const data = await response.json();
+    for (const horario of relatoHorarios) {
+      try {
+        const response = await fetch(`${API_URL}/relatos-aba`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            assistido: assistidoFinal,
+            dia_semana: relatoDiaSemana,
+            horario,
+            tipo: relatoTipo,
+            observacao: relatoObservacao.trim() || null,
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error(data.detail || 'Erro ao enviar relato');
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Erro ao enviar relato');
+        sucesso++;
+      } catch (err) {
+        erros.push(`${horario}: ${err.message}`);
       }
-
-      setMensagemRelato({ ok: true, texto: `✅ Relato de "${assistidoFinal}" enviado!` });
-      limparFormularioRelato();
-      if (isCoordenacao) carregarRelatos();
-    } catch (err) {
-      setMensagemRelato({ ok: false, texto: err.message });
-    } finally {
-      setEnviandoRelato(false);
     }
+
+    if (sucesso > 0 && erros.length === 0) {
+      setMensagemRelato({
+        ok: true,
+        texto: `✅ Relato${sucesso > 1 ? 's' : ''} de "${assistidoFinal}" enviado${sucesso > 1 ? 's' : ''} (${sucesso} horário${sucesso > 1 ? 's' : ''})!`
+      });
+      limparFormularioRelato();
+    } else if (sucesso > 0) {
+      setMensagemRelato({ ok: false, texto: `⚠️ ${sucesso} enviado(s), mas falhou em: ${erros.join('; ')}` });
+    } else {
+      setMensagemRelato({ ok: false, texto: erros.join('; ') || 'Erro ao enviar relato' });
+    }
+
+    if (isCoordenacao) carregarRelatos();
+    setEnviandoRelato(false);
   };
 
   const carregarRelatos = async () => {
@@ -514,10 +531,10 @@ export default function AppAplicadores() {
   }, [token, isCoordenacao]);
 
   useEffect(() => {
-    if (token && isCoordenacao && mostrarPainelRelatos) {
+    if (token && isCoordenacao && tela === 'relatos-aba') {
       carregarRelatos();
     }
-  }, [token, isCoordenacao, mostrarPainelRelatos, filtroRelatoDia, filtroRelatoTipo]);
+  }, [token, isCoordenacao, tela, filtroRelatoDia, filtroRelatoTipo]);
 
   // AGRUPA AS PENDÊNCIAS POR APLICADOR
   const pendenciasAgrupadas = pendencias.reduce((acc, p) => {
@@ -655,24 +672,44 @@ export default function AppAplicadores() {
       </div>
 
       {/* ========================================== */}
+      {/* ITEM 6/7: TELA DE MENU (home) */}
+      {/* ========================================== */}
+      {tela === 'home' && (
+        <div style={{ width: '100%' }}>
+          <MinecraftPanel title="Ações Rápidas">
+            <MinecraftButton onClick={() => setTela('titas')}>Lista de Titas</MinecraftButton>
+            <MinecraftButton onClick={() => setTela('relatar-aba')}>Relatar Sessão sem ABA</MinecraftButton>
+            {isCoordenacao && (
+              <MinecraftButton onClick={() => setTela('cadastro-massa')}>Cadastro em Massa</MinecraftButton>
+            )}
+            {isCoordenacao && (
+              <MinecraftButton onClick={() => setTela('relatos-aba')}>Relatos de Sessão sem ABA</MinecraftButton>
+            )}
+            {isCoordenacao && (
+              <MinecraftButton onClick={() => setTela('gerenciar-usuarios')}>Gerenciar Aplicadores</MinecraftButton>
+            )}
+          </MinecraftPanel>
+        </div>
+      )}
+
+      {/* Botão de voltar, usado em todas as telas que não são o menu */}
+      {tela !== 'home' && (
+        <MinecraftButton onClick={() => setTela('home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
+          ← Voltar ao menu
+        </MinecraftButton>
+      )}
+
+      {/* ========================================== */}
       {/* RELATAR SESSÃO SEM ABA NO TITA (aplicador + coordenação) */}
       {/* ========================================== */}
-      <div style={{ width: '100%', marginBottom: '20px' }}>
+      {tela === 'relatar-aba' && (
         <MinecraftPanel title="Relatar Sessão sem ABA">
-          <div
-            onClick={() => setMostrarPainelRelatar(!mostrarPainelRelatar)}
-            style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
-          >
-            {mostrarPainelRelatar ? '▼' : '▶'} Assistido sem ABA no TITA
-          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+            <p style={{ fontSize: '14px', color: '#333', lineHeight: '1.6', margin: 0 }}>
+              Use quando um assistido tem/tinha sessão de ABA marcada na agenda, mas ela não existe no Titas.
+            </p>
 
-          {mostrarPainelRelatar && (
-            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <p style={{ fontSize: '11px', color: '#333', lineHeight: '1.5', margin: 0 }}>
-                Use quando um assistido tem/tinha sessão de ABA marcada na agenda, mas ela não existe no Titas.
-              </p>
-
-              {!relatoModoManual ? (
+            {!relatoModoManual ? (
                 <div style={{ position: 'relative' }}>
                   <input
                     type="text"
@@ -724,10 +761,27 @@ export default function AppAplicadores() {
                 {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
               </select>
 
-              <select value={relatoHorario} onChange={(e) => setRelatoHorario(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
-                <option value="">Horário...</option>
-                {HORARIOS_RELATO.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
+              <div>
+                <p style={{ fontSize: '10px', color: '#333', margin: '0 0 6px 0', fontFamily: '"Press Start 2P", monospace' }}>
+                  Horário(s) — marque quantos precisar:
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {HORARIOS_RELATO.map(h => (
+                    <label
+                      key={h}
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', border: '2px solid #555', backgroundColor: relatoHorarios.includes(h) ? '#a8e6cf' : '#d9d9d9', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '9px' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={relatoHorarios.includes(h)}
+                        onChange={() => toggleRelatoHorario(h)}
+                        style={{ width: '14px', height: '14px' }}
+                      />
+                      {h}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               <select value={relatoTipo} onChange={(e) => setRelatoTipo(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
                 <option value="">O que aconteceu?</option>
@@ -749,7 +803,7 @@ export default function AppAplicadores() {
                   enviandoRelato ||
                   (!relatoModoManual && !relatoAssistidoEscolhido) ||
                   (relatoModoManual && !relatoAssistidoManual.trim()) ||
-                  !relatoDiaSemana || !relatoHorario || !relatoTipo
+                  !relatoDiaSemana || relatoHorarios.length === 0 || !relatoTipo
                 }
               >
                 {enviandoRelato ? 'Enviando...' : 'Enviar Relato'}
@@ -761,26 +815,16 @@ export default function AppAplicadores() {
                 </p>
               )}
             </div>
-          )}
         </MinecraftPanel>
-      </div>
+      )}
 
       {/* ========================================== */}
       {/* PONTO 1: CADASTRO EM MASSA (só coordenação) */}
       {/* ========================================== */}
-      {isCoordenacao && (
-        <div style={{ width: '100%', marginBottom: '20px' }}>
-          <MinecraftPanel title="Cadastro em Massa">
-            <div
-              onClick={() => setMostrarCadastroBulk(!mostrarCadastroBulk)}
-              style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
-            >
-              {mostrarCadastroBulk ? '▼' : '▶'} Colar titas pendentes
-            </div>
-
-            {mostrarCadastroBulk && (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <p style={{ fontSize: '12px', color: '#333', lineHeight: '1.6', margin: 0 }}>
+      {isCoordenacao && tela === 'cadastro-massa' && (
+        <MinecraftPanel title="Cadastro em Massa">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+              <p style={{ fontSize: '12px', color: '#333', lineHeight: '1.6', margin: 0 }}>
                   Uma linha por tita, campos separados por ";":<br/>
                   <strong>DATA;HORARIO;TITA;APLICADOR;OBSERVACAO</strong><br/>
                   (DATA no formato DD/MM/AAAA · OBSERVACAO é opcional)
@@ -810,58 +854,50 @@ export default function AppAplicadores() {
                   </div>
                 )}
               </div>
-            )}
-          </MinecraftPanel>
-        </div>
+        </MinecraftPanel>
       )}
 
       {/* ================================================= */}
-      {/* PONTO 2: FILA DE APROVAÇÃO DE REMOÇÃO (coordenação) */}
+      {/* PONTO 2: FILA DE APROVAÇÃO DE REMOÇÃO (coordenação, dentro da tela Lista de Titas) */}
       {/* ================================================= */}
-      {isCoordenacao && pendenciasParaAprovacao.length > 0 && (
-        <div style={{ width: '100%', marginBottom: '20px' }}>
+      {tela === 'titas' && isCoordenacao && pendenciasParaAprovacao.length > 0 && (
+        <div style={{ width: '100%', marginTop: '20px' }}>
           <MinecraftPanel title="Fila de Aprovação">
-            <div
-              onClick={() => { setMostrarFilaAprovacao(!mostrarFilaAprovacao); setConfirmandoRemocaoLote(false); }}
-              style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
-            >
-              {mostrarFilaAprovacao ? '▼' : '▶'} {pendenciasParaAprovacao.length} tita(s) aguardando remoção
-            </div>
-
-            {mostrarFilaAprovacao && (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <MinecraftButton onClick={handleToggleSelecionarTodos} style={{ fontSize: '9px', padding: '8px 10px', alignSelf: 'flex-start' }}>
-                  {selecionadosRemocao.length === pendenciasParaAprovacao.length ? 'Desmarcar todos' : 'Selecionar todos'}
-                </MinecraftButton>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {pendenciasParaAprovacao.map((p) => (
-                    <label
-                      key={p.id}
-                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#a8e6cf', border: '2px solid #3b7d4f', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#000' }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selecionadosRemocao.includes(p.id)}
-                        onChange={() => toggleSelecaoRemocao(p.id)}
-                        style={{ width: '16px', height: '16px', flexShrink: 0 }}
-                      />
-                      <span>{p.tita} <span style={{ color: '#333' }}>({p.aplicador} · {formatarDataPorExtenso(p.data)})</span></span>
-                    </label>
-                  ))}
-                </div>
-                <MinecraftButton
-                  onClick={handleClickConfirmarRemocao}
-                  disabled={carregandoRemocao || selecionadosRemocao.length === 0}
-                  style={confirmandoRemocaoLote ? { backgroundColor: '#a83232', color: '#fff' } : undefined}
-                >
-                  {carregandoRemocao
-                    ? 'Removendo...'
-                    : confirmandoRemocaoLote
-                      ? `Tem certeza? Clique de novo (${selecionadosRemocao.length})`
-                      : `Confirmar remoção (${selecionadosRemocao.length})`}
-                </MinecraftButton>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+              <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
+                {pendenciasParaAprovacao.length} tita(s) aguardando remoção
+              </p>
+              <MinecraftButton onClick={handleToggleSelecionarTodos} style={{ fontSize: '9px', padding: '8px 10px', alignSelf: 'flex-start' }}>
+                {selecionadosRemocao.length === pendenciasParaAprovacao.length ? 'Desmarcar todos' : 'Selecionar todos'}
+              </MinecraftButton>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pendenciasParaAprovacao.map((p) => (
+                  <label
+                    key={p.id}
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#a8e6cf', border: '2px solid #3b7d4f', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#000' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selecionadosRemocao.includes(p.id)}
+                      onChange={() => toggleSelecaoRemocao(p.id)}
+                      style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                    />
+                    <span>{p.tita} <span style={{ color: '#333' }}>({p.aplicador} · {formatarDataPorExtenso(p.data)})</span></span>
+                  </label>
+                ))}
               </div>
-            )}
+              <MinecraftButton
+                onClick={handleClickConfirmarRemocao}
+                disabled={carregandoRemocao || selecionadosRemocao.length === 0}
+                style={confirmandoRemocaoLote ? { backgroundColor: '#a83232', color: '#fff' } : undefined}
+              >
+                {carregandoRemocao
+                  ? 'Removendo...'
+                  : confirmandoRemocaoLote
+                    ? `Tem certeza? Clique de novo (${selecionadosRemocao.length})`
+                    : `Confirmar remoção (${selecionadosRemocao.length})`}
+              </MinecraftButton>
+            </div>
           </MinecraftPanel>
         </div>
       )}
@@ -869,18 +905,10 @@ export default function AppAplicadores() {
       {/* ================================================= */}
       {/* RELATOS DE SESSÃO SEM ABA — VISÃO DA COORDENAÇÃO */}
       {/* ================================================= */}
-      {isCoordenacao && (
-        <div style={{ width: '100%', marginBottom: '20px' }}>
+      {isCoordenacao && tela === 'relatos-aba' && (
+        <div style={{ width: '100%' }}>
           <MinecraftPanel title="Relatos de Sessão sem ABA">
-            <div
-              onClick={() => setMostrarPainelRelatos(!mostrarPainelRelatos)}
-              style={{ cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', padding: '4px 0', userSelect: 'none' }}
-            >
-              {mostrarPainelRelatos ? '▼' : '▶'} Ver relatos enviados
-            </div>
-
-            {mostrarPainelRelatos && (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
 
                 {/* Filtros */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -957,32 +985,20 @@ export default function AppAplicadores() {
                   </>
                 )}
               </div>
-            )}
           </MinecraftPanel>
         </div>
       )}
 
       {/* ================================================= */}
-      {/* GRUPO 3: GESTÃO DE USUÁRIOS/LOGINS atrás de engrenagem (coordenação) */}
+      {/* GRUPO 3: GESTÃO DE USUÁRIOS/LOGINS — agora é uma tela do menu (item 6) */}
       {/* ================================================= */}
-      {isCoordenacao && gearMenuAberto && (
-        <div
-          onClick={() => setGearMenuAberto(false)}
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '20px', boxSizing: 'border-box' }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '500px', marginTop: '30px' }}
-          >
-            <MinecraftPanel title="Gerenciar Aplicadores">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff' }}>
+      {isCoordenacao && tela === 'gerenciar-usuarios' && (
+        <div style={{ width: '100%' }}>
+          <MinecraftPanel title="Gerenciar Aplicadores">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '4px' }}>
+                <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
                   {usuarios.length} usuário(s) cadastrado(s)
-                </span>
-                <MinecraftButton onClick={() => setGearMenuAberto(false)} style={{ fontSize: '9px', padding: '6px 10px' }}>Fechar ✕</MinecraftButton>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                </p>
 
                 {/* Formulário de criação */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1022,40 +1038,14 @@ export default function AppAplicadores() {
                   ))}
                 </div>
               </div>
-            </MinecraftPanel>
-          </div>
+          </MinecraftPanel>
         </div>
-      )}
-
-      {/* GRUPO 3: ícone de engrenagem fixo no canto inferior direito */}
-      {isCoordenacao && (
-        <button
-          onClick={() => setGearMenuAberto(true)}
-          aria-label="Gerenciar Aplicadores"
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            width: '54px',
-            height: '54px',
-            fontSize: '24px',
-            lineHeight: '1',
-            backgroundColor: '#C6C6C6',
-            border: '2px solid',
-            borderColor: '#fff #555 #555 #fff',
-            boxShadow: '2px 2px 0px rgba(0,0,0,0.4)',
-            cursor: 'pointer',
-            zIndex: 998,
-            imageRendering: 'pixelated',
-          }}
-        >
-          ⚙️
-        </button>
       )}
 
       {/* ========================================== */}
       {/* LISTA PRINCIPAL DE PENDÊNCIAS POR APLICADOR */}
       {/* ========================================== */}
+      {tela === 'titas' && (
       <div style={{ width: '100%' }}>
         <MinecraftPanel title="Lista de Titas">
           {pendencias.length === 0 ? (
@@ -1065,15 +1055,17 @@ export default function AppAplicadores() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
 
-              {/* GRUPO 2: busca por aplicador + abrir/fechar todos os dropdowns */}
+              {/* GRUPO 2: busca por aplicador (só coordenação, item 1 das novas sugestões) + abrir/fechar todos */}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  placeholder="Buscar aplicador..."
-                  value={buscaAplicador}
-                  onChange={(e) => setBuscaAplicador(e.target.value)}
-                  style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
-                />
+                {isCoordenacao && (
+                  <input
+                    type="text"
+                    placeholder="Buscar aplicador..."
+                    value={buscaAplicador}
+                    onChange={(e) => setBuscaAplicador(e.target.value)}
+                    style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                  />
+                )}
                 <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
                   {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
                 </MinecraftButton>
@@ -1140,6 +1132,7 @@ export default function AppAplicadores() {
           )}
         </MinecraftPanel>
       </div>
+      )}
     </div>
   );
 }
