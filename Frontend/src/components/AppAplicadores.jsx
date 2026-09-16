@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import MinecraftButton from './MinecraftButton';
 import MinecraftPanel from './MinecraftPanel';
 import Capybara from './Capybara';
+import TelaGerarEscala from './TelaGerarEscala';
+import TelaPacientes from './TelaPacientes';
+import TelaConfiguracoes from './TelaConfiguracoes';
+import TelaLoading from './TelaLoading';
 
 // Lembre-se de colocar a sua URL real do Render aqui!
 const API_URL = "https://capyos.onrender.com";
@@ -16,8 +20,13 @@ export default function AppAplicadores() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
+  // Tela de "Acordando o servidor": antes só existia no caminho antigo da raiz
+  // ("/"); agora que "/" e "/aplicador" caem no mesmo app, vale pra todo
+  // mundo — evita tentar logar com o backend (Render free tier) ainda dormindo.
+  const [acordandoServidor, setAcordandoServidor] = useState(true);
+
   // ITEM 5/6/7: navegação em estilo menu (igual o CapyOS de alocação de salas)
-  const [tela, setTela] = useState('home'); // home | titas | relatar-aba | cadastro-massa | relatos-aba | gerenciar-usuarios
+  const [tela, setTela] = useState('home'); // home | titas | relatar-aba | cadastro-massa | relatos-aba | gerenciar-usuarios | gerar-escala | salas-pacientes | salas-configuracoes
 
   // PONTO 3: controle de dropdown aberto/fechado por aplicador (aberto por padrão)
   const [gruposAbertos, setGruposAbertos] = useState({});
@@ -631,6 +640,10 @@ export default function AppAplicadores() {
   // ==========================================
   // TELA DE LOGIN
   // ==========================================
+  if (acordandoServidor) {
+    return <TelaLoading onPronto={() => setAcordandoServidor(false)} />;
+  }
+
   if (!token) {
     return (
       <div style={{ width: '100%', maxWidth: '400px', margin: '40px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px', boxSizing: 'border-box' }}>
@@ -658,7 +671,7 @@ export default function AppAplicadores() {
   // TELA PRINCIPAL DE PENDÊNCIAS
   // ==========================================
   return (
-    <div style={{ width: '100%', maxWidth: '600px', margin: '20px auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 16px', boxSizing: 'border-box' }}>
+    <div style={{ width: '100%', maxWidth: '600px', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '24px', gap: '10px' }}>
         <div style={{ flex: 1 }}>
           <h2 className="mc-title" style={{ fontSize: 16, margin: 0, textAlign: 'left', lineHeight: '1.3' }}>Olá, {usuarioNome} 💜</h2>
@@ -672,32 +685,54 @@ export default function AppAplicadores() {
       </div>
 
       {/* ========================================== */}
-      {/* ITEM 6/7: TELA DE MENU (home) */}
+      {/* ITEM 6/7: TELA DE MENU (home) — centralizada no meio da tela, estilo Minecraft */}
       {/* ========================================== */}
       {tela === 'home' && (
-        <div style={{ width: '100%' }}>
-          <MinecraftPanel title="Ações Rápidas">
-            <MinecraftButton onClick={() => setTela('titas')}>Lista de Titas</MinecraftButton>
-            <MinecraftButton onClick={() => setTela('relatar-aba')}>Relatar Sessão sem ABA</MinecraftButton>
-            {isCoordenacao && (
-              <MinecraftButton onClick={() => setTela('cadastro-massa')}>Cadastro em Massa</MinecraftButton>
-            )}
-            {isCoordenacao && (
-              <MinecraftButton onClick={() => setTela('relatos-aba')}>Relatos de Sessão sem ABA</MinecraftButton>
-            )}
-            {isCoordenacao && (
-              <MinecraftButton onClick={() => setTela('gerenciar-usuarios')}>Gerenciar Aplicadores</MinecraftButton>
-            )}
-          </MinecraftPanel>
+        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
+          <div style={{ width: '100%' }}>
+            <MinecraftPanel title="Ações Rápidas">
+              <MinecraftButton onClick={() => setTela('titas')}>Lista de Titas</MinecraftButton>
+              <MinecraftButton onClick={() => setTela('relatar-aba')}>Relatar Sessão sem ABA</MinecraftButton>
+              {isCoordenacao && (
+                <MinecraftButton onClick={() => setTela('cadastro-massa')}>Cadastro em Massa</MinecraftButton>
+              )}
+              {isCoordenacao && (
+                <MinecraftButton onClick={() => setTela('relatos-aba')}>Relatos de Sessão sem ABA</MinecraftButton>
+              )}
+              {isCoordenacao && (
+                <MinecraftButton onClick={() => setTela('gerenciar-usuarios')}>Gerenciar Aplicadores</MinecraftButton>
+              )}
+            </MinecraftPanel>
+          </div>
+
+          {/* Direcionamento de Salas: era um CapyOS separado sem login — agora é
+              só mais um grupo de funcionalidades da coordenação, no mesmo menu */}
+          {isCoordenacao && (
+            <div style={{ width: '100%' }}>
+              <MinecraftPanel title="Direcionamento de Salas">
+                <MinecraftButton onClick={() => setTela('gerar-escala')}>Gerar Escala</MinecraftButton>
+                <MinecraftButton onClick={() => setTela('salas-pacientes')}>Gerenciar Assistidos</MinecraftButton>
+                <MinecraftButton onClick={() => setTela('salas-configuracoes')}>Configurações Gerais</MinecraftButton>
+              </MinecraftPanel>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Botão de voltar, usado em todas as telas que não são o menu */}
-      {tela !== 'home' && (
+      {/* Botão de voltar, usado em todas as telas que não são o menu (as telas
+          de Salas já trazem o próprio botão "Voltar", então ficam de fora daqui) */}
+      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes'].includes(tela) && (
         <MinecraftButton onClick={() => setTela('home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
           ← Voltar ao menu
         </MinecraftButton>
       )}
+
+      {/* ========================================== */}
+      {/* DIRECIONAMENTO DE SALAS — agora dentro do mesmo login, exclusivo coordenação */}
+      {/* ========================================== */}
+      {isCoordenacao && tela === 'gerar-escala' && <TelaGerarEscala onVoltar={() => setTela('home')} />}
+      {isCoordenacao && tela === 'salas-pacientes' && <TelaPacientes onVoltar={() => setTela('home')} />}
+      {isCoordenacao && tela === 'salas-configuracoes' && <TelaConfiguracoes onVoltar={() => setTela('home')} />}
 
       {/* ========================================== */}
       {/* RELATAR SESSÃO SEM ABA NO TITA (aplicador + coordenação) */}
