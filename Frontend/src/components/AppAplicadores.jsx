@@ -667,13 +667,14 @@ export default function AppAplicadores() {
     );
   }
 
-  // Mapa de "pra onde volta" — cada tela sabe qual é sua tela-mãe, já que
-  // agora tem dois níveis de menu (home -> submenu -> tela final)
+  // Mapa de "pra onde volta" — cada tela sabe qual é sua tela-mãe. Pro
+  // aplicador, Lista de Titas e Relatar Sessão sem ABA ficam direto na tela
+  // principal (não tem submenu de Pendências), então voltam pra 'home'.
   const TELA_PAI = {
     'pendencias-menu': 'home',
     'configuracoes-menu': 'home',
-    'titas': 'pendencias-menu',
-    'relatar-aba': 'pendencias-menu',
+    'titas': isCoordenacao ? 'pendencias-menu' : 'home',
+    'relatar-aba': isCoordenacao ? 'pendencias-menu' : 'home',
     'cadastro-massa': 'pendencias-menu',
     'relatos-aba': 'pendencias-menu',
     'gerenciar-usuarios': 'configuracoes-menu',
@@ -700,23 +701,33 @@ export default function AppAplicadores() {
     ));
   };
 
-  const botoesMenuPrincipal = [
-    { label: 'Pendências', onClick: () => setTela('pendencias-menu') },
-    ...(isCoordenacao ? [{ label: 'Gerar Escala', onClick: () => setTela('gerar-escala') }] : []),
-    ...(isCoordenacao ? [{ label: 'Configurações', onClick: () => setTela('configuracoes-menu') }] : []),
-  ];
+  // Pro aplicador, Lista de Titas e Relatar Sessão sem ABA ficam direto na
+  // tela principal — não fazia sentido esconder atrás de "Pendências" quando
+  // são as duas únicas coisas que ele tem acesso
+  const botoesMenuPrincipal = isCoordenacao
+    ? [
+        { label: 'Pendências', onClick: () => setTela('pendencias-menu') },
+        { label: 'Gerar Escala', onClick: () => setTela('gerar-escala') },
+        { label: 'Configurações', onClick: () => setTela('configuracoes-menu') },
+      ]
+    : [
+        { label: 'Lista de Titas', onClick: () => setTela('titas') },
+        { label: 'Relatar Sessão sem ABA', onClick: () => setTela('relatar-aba') },
+      ];
 
   const botoesPendencias = [
     { label: 'Lista de Titas', onClick: () => setTela('titas') },
     { label: 'Relatar Sessão sem ABA', onClick: () => setTela('relatar-aba') },
-    ...(isCoordenacao ? [{ label: 'Cadastro em Massa', onClick: () => setTela('cadastro-massa') }] : []),
-    ...(isCoordenacao ? [{ label: 'Relatos de Sessão sem ABA', onClick: () => setTela('relatos-aba') }] : []),
+    { label: 'Cadastro em Massa', onClick: () => setTela('cadastro-massa') },
+    { label: 'Relatos de Sessão sem ABA', onClick: () => setTela('relatos-aba') },
+    { label: '← Voltar', onClick: () => setTela('home') },
   ];
 
   const botoesConfiguracoes = [
     { label: 'Gerenciar Aplicadores', onClick: () => setTela('gerenciar-usuarios') },
     { label: 'Gerenciar Assistidos', onClick: () => setTela('salas-pacientes') },
     { label: 'Configurações Gerais', onClick: () => setTela('salas-configuracoes') },
+    { label: '← Voltar', onClick: () => setTela('home') },
   ];
 
   // ==========================================
@@ -744,9 +755,9 @@ export default function AppAplicadores() {
       )}
 
       {/* ========================================== */}
-      {/* SUBMENU: PENDÊNCIAS (Lista de Titas, Cadastro em Massa, Relatar/Relatos sem ABA) */}
+      {/* SUBMENU: PENDÊNCIAS — só coordenação (aplicador já tem os botões na home) */}
       {/* ========================================== */}
-      {tela === 'pendencias-menu' && (
+      {isCoordenacao && tela === 'pendencias-menu' && (
         <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ width: '100%' }}>{renderBotoesEmPares(botoesPendencias)}</div>
         </div>
@@ -761,9 +772,11 @@ export default function AppAplicadores() {
         </div>
       )}
 
-      {/* Botão de voltar, usado em todas as telas que não são o menu (as telas
-          de Salas já trazem o próprio botão "Voltar", então ficam de fora daqui) */}
-      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes'].includes(tela) && (
+      {/* Botão de voltar das telas finais (Lista de Titas, Cadastro em Massa,
+          etc.) — os dois submenus (Pendências/Configurações) já trazem o
+          próprio "← Voltar" junto dos outros botões, e as telas de Salas
+          também têm o próprio botão embutido, então ficam de fora daqui */}
+      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes', 'pendencias-menu', 'configuracoes-menu'].includes(tela) && (
         <MinecraftButton onClick={() => setTela(TELA_PAI[tela] || 'home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
           ← Voltar
         </MinecraftButton>
@@ -1132,9 +1145,9 @@ export default function AppAplicadores() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
 
-              {/* GRUPO 2: busca por aplicador (só coordenação, item 1 das novas sugestões) + abrir/fechar todos */}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {isCoordenacao && (
+              {/* GRUPO 2: busca + abrir/fechar todos — só coordenação (aplicador só tem um grupo, não faz sentido) */}
+              {isCoordenacao && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     placeholder="Buscar aplicador..."
@@ -1142,11 +1155,11 @@ export default function AppAplicadores() {
                     onChange={(e) => setBuscaAplicador(e.target.value)}
                     style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
                   />
-                )}
-                <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                  {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
-                </MinecraftButton>
-              </div>
+                  <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                    {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
+                  </MinecraftButton>
+                </div>
+              )}
 
               {aplicadoresFiltrados.length === 0 && (
                 <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: '"Press Start 2P", monospace' }}>
