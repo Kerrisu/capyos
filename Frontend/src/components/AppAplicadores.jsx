@@ -667,72 +667,114 @@ export default function AppAplicadores() {
     );
   }
 
+  // Mapa de "pra onde volta" — cada tela sabe qual é sua tela-mãe, já que
+  // agora tem dois níveis de menu (home -> submenu -> tela final)
+  const TELA_PAI = {
+    'pendencias-menu': 'home',
+    'configuracoes-menu': 'home',
+    'titas': 'pendencias-menu',
+    'relatar-aba': 'pendencias-menu',
+    'cadastro-massa': 'pendencias-menu',
+    'relatos-aba': 'pendencias-menu',
+    'gerenciar-usuarios': 'configuracoes-menu',
+    'salas-pacientes': 'configuracoes-menu',
+    'salas-configuracoes': 'configuracoes-menu',
+    'gerar-escala': 'home',
+  };
+
+  // Renderiza uma lista de botões em pares lado a lado (estilo Minecraft:
+  // Options.../Quit Game), sobrando um sozinho na linha se for número ímpar
+  const renderBotoesEmPares = (botoes) => {
+    const linhas = [];
+    for (let i = 0; i < botoes.length; i += 2) {
+      linhas.push(botoes.slice(i, i + 2));
+    }
+    return linhas.map((linha, idx) => (
+      <div key={idx} style={{ display: 'flex', gap: '12px', width: '100%', marginBottom: '10px' }}>
+        {linha.map((b) => (
+          <MinecraftButton key={b.label} onClick={b.onClick} style={{ flex: 1, marginBottom: 0 }}>
+            {b.label}
+          </MinecraftButton>
+        ))}
+      </div>
+    ));
+  };
+
+  const botoesMenuPrincipal = [
+    { label: 'Pendências', onClick: () => setTela('pendencias-menu') },
+    ...(isCoordenacao ? [{ label: 'Gerar Escala', onClick: () => setTela('gerar-escala') }] : []),
+    ...(isCoordenacao ? [{ label: 'Configurações', onClick: () => setTela('configuracoes-menu') }] : []),
+  ];
+
+  const botoesPendencias = [
+    { label: 'Lista de Titas', onClick: () => setTela('titas') },
+    { label: 'Relatar Sessão sem ABA', onClick: () => setTela('relatar-aba') },
+    ...(isCoordenacao ? [{ label: 'Cadastro em Massa', onClick: () => setTela('cadastro-massa') }] : []),
+    ...(isCoordenacao ? [{ label: 'Relatos de Sessão sem ABA', onClick: () => setTela('relatos-aba') }] : []),
+  ];
+
+  const botoesConfiguracoes = [
+    { label: 'Gerenciar Aplicadores', onClick: () => setTela('gerenciar-usuarios') },
+    { label: 'Gerenciar Assistidos', onClick: () => setTela('salas-pacientes') },
+    { label: 'Configurações Gerais', onClick: () => setTela('salas-configuracoes') },
+  ];
+
   // ==========================================
   // TELA PRINCIPAL DE PENDÊNCIAS
   // ==========================================
   return (
     <div style={{ width: '100%', maxWidth: '600px', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '24px', gap: '10px' }}>
-        <div style={{ flex: 1 }}>
-          <h2 className="mc-title" style={{ fontSize: 16, margin: 0, textAlign: 'left', lineHeight: '1.3' }}>Olá, {usuarioNome} 💜</h2>
-          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>
-            {isCoordenacao ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
-          </p>
-        </div>
-        <div>
-          <MinecraftButton onClick={handleLogout}>Sair</MinecraftButton>
-        </div>
+      <div style={{ width: '100%', marginBottom: '24px', textAlign: 'left' }}>
+        <h2 className="mc-title" style={{ fontSize: 16, margin: 0, lineHeight: '1.3' }}>Olá, {usuarioNome}</h2>
+        <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>
+          {isCoordenacao ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
+        </p>
       </div>
 
       {/* ========================================== */}
-      {/* ITEM 6/7: TELA DE MENU (home) — centralizada no meio da tela, estilo Minecraft */}
+      {/* TELA DE MENU (home) — sem painel/retângulo, botões soltos, estilo Minecraft */}
       {/* ========================================== */}
       {tela === 'home' && (
-        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
+        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ width: '100%' }}>
-            <MinecraftPanel title="Ações Rápidas">
-              <MinecraftButton onClick={() => setTela('titas')}>Lista de Titas</MinecraftButton>
-              <MinecraftButton onClick={() => setTela('relatar-aba')}>Relatar Sessão sem ABA</MinecraftButton>
-              {isCoordenacao && (
-                <MinecraftButton onClick={() => setTela('cadastro-massa')}>Cadastro em Massa</MinecraftButton>
-              )}
-              {isCoordenacao && (
-                <MinecraftButton onClick={() => setTela('relatos-aba')}>Relatos de Sessão sem ABA</MinecraftButton>
-              )}
-              {isCoordenacao && (
-                <MinecraftButton onClick={() => setTela('gerenciar-usuarios')}>Gerenciar Aplicadores</MinecraftButton>
-              )}
-            </MinecraftPanel>
+            {renderBotoesEmPares(botoesMenuPrincipal)}
+            {renderBotoesEmPares([{ label: 'Sair', onClick: handleLogout }])}
           </div>
+        </div>
+      )}
 
-          {/* Direcionamento de Salas: era um CapyOS separado sem login — agora é
-              só mais um grupo de funcionalidades da coordenação, no mesmo menu */}
-          {isCoordenacao && (
-            <div style={{ width: '100%' }}>
-              <MinecraftPanel title="Direcionamento de Salas">
-                <MinecraftButton onClick={() => setTela('gerar-escala')}>Gerar Escala</MinecraftButton>
-                <MinecraftButton onClick={() => setTela('salas-pacientes')}>Gerenciar Assistidos</MinecraftButton>
-                <MinecraftButton onClick={() => setTela('salas-configuracoes')}>Configurações Gerais</MinecraftButton>
-              </MinecraftPanel>
-            </div>
-          )}
+      {/* ========================================== */}
+      {/* SUBMENU: PENDÊNCIAS (Lista de Titas, Cadastro em Massa, Relatar/Relatos sem ABA) */}
+      {/* ========================================== */}
+      {tela === 'pendencias-menu' && (
+        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ width: '100%' }}>{renderBotoesEmPares(botoesPendencias)}</div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* SUBMENU: CONFIGURAÇÕES (Gerenciar Aplicadores/Assistidos, Configurações Gerais) */}
+      {/* ========================================== */}
+      {isCoordenacao && tela === 'configuracoes-menu' && (
+        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ width: '100%' }}>{renderBotoesEmPares(botoesConfiguracoes)}</div>
         </div>
       )}
 
       {/* Botão de voltar, usado em todas as telas que não são o menu (as telas
           de Salas já trazem o próprio botão "Voltar", então ficam de fora daqui) */}
       {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes'].includes(tela) && (
-        <MinecraftButton onClick={() => setTela('home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
-          ← Voltar ao menu
+        <MinecraftButton onClick={() => setTela(TELA_PAI[tela] || 'home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
+          ← Voltar
         </MinecraftButton>
       )}
 
       {/* ========================================== */}
       {/* DIRECIONAMENTO DE SALAS — agora dentro do mesmo login, exclusivo coordenação */}
       {/* ========================================== */}
-      {isCoordenacao && tela === 'gerar-escala' && <TelaGerarEscala onVoltar={() => setTela('home')} />}
-      {isCoordenacao && tela === 'salas-pacientes' && <TelaPacientes onVoltar={() => setTela('home')} />}
-      {isCoordenacao && tela === 'salas-configuracoes' && <TelaConfiguracoes onVoltar={() => setTela('home')} />}
+      {isCoordenacao && tela === 'gerar-escala' && <TelaGerarEscala onVoltar={() => setTela(TELA_PAI['gerar-escala'])} />}
+      {isCoordenacao && tela === 'salas-pacientes' && <TelaPacientes onVoltar={() => setTela(TELA_PAI['salas-pacientes'])} />}
+      {isCoordenacao && tela === 'salas-configuracoes' && <TelaConfiguracoes onVoltar={() => setTela(TELA_PAI['salas-configuracoes'])} />}
 
       {/* ========================================== */}
       {/* RELATAR SESSÃO SEM ABA NO TITA (aplicador + coordenação) */}
