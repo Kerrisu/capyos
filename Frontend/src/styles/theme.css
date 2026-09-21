@@ -57,6 +57,14 @@ body {
      no uso prolongado do dia a dia (é uma ferramenta clínica, não uma
      página de divulgação). */
   background-color: var(--visor-fundo);
+  /* Fundo original restaurado a pedido do Ken: a arte pixel art com o
+     overlay azul a 75% de opacidade por cima (mesmo ajuste de antes do
+     rebrand VISOR) — só 25% da imagem aparece, sem lavar pra branco/preto. */
+  background-image: linear-gradient(rgba(126, 192, 238, 0.75), rgba(126, 192, 238, 0.75)), url('../assets/bg_capyos.png');
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   min-height: 100vh;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
