@@ -11,11 +11,11 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'CapyOS - Direcionamento de Salas',
-        short_name: 'CapyOS',
-        description: 'Sistema de direcionamento de salas da clínica ABA',
-        theme_color: '#7EC0EE',
-        background_color: '#7EC0EE',
+        name: 'VISOR - Instituto do Autismo',
+        short_name: 'VISOR',
+        description: 'Visualização Integrada de Sessões, Organização e Registros',
+        theme_color: '#053762',
+        background_color: '#FAF9F6',
         display: 'standalone',
         start_url: '/',
         icons: [
