@@ -1,49 +1,63 @@
-/* CapyOS - Tema visual global (Minecraft-inspired) */
-/* As fontes (Press Start 2P, VT323) são carregadas via <link> no index.html */
+/* VISOR - Tema visual global */
+/* Antes CapyOS/Minecraft-inspired; agora identidade VISOR (Visualização
+   Integrada de Sessões, Organização e Registros), usando a paleta oficial
+   do Instituto do Autismo (extraída da logo em formato de quebra-cabeça).
+   Os seletores continuam com o prefixo "mc-" por enquanto (mexer neles
+   também exigiria atualizar className em vários arquivos) — é só um nome
+   interno, não aparece pra ninguém; renomear fica como possível limpeza
+   futura, sem pressa. A fonte (Cutive Mono) é carregada via <link> no
+   index.html. */
 :root {
-  --mc-panel: #C6C6C6;
-  --mc-panel-light: #FFFFFF;
-  --mc-panel-dark: #373737;
-  --mc-sky-top: #7EC0EE;
-  --mc-sky-bottom: #3E7CB1;
-  --mc-text-dark: #2B2B2B;
-  --mc-button-bg: #A0A0A0;
-  --mc-button-light: #D4D4D4;
-  --mc-button-dark: #5C5C5C;
-  --mc-button-hover: #B8B8B8;
+  /* Paleta oficial VISOR, extraída da logo do Instituto do Autismo */
+  --visor-navy: #053762;
+  --visor-navy-escuro: #032338;
+  --visor-vermelho: #F21214;
+  --visor-vermelho-escuro: #A50C0E;
+  --visor-amarelo: #FBC80D;
+  --visor-amarelo-escuro: #A88400;
+  --visor-verde: #10852C;
+  --visor-verde-escuro: #0A5A1E;
 
-  --mc-danger-bg: #C0392B;
-  --mc-danger-light: #E74C3C;
-  --mc-danger-dark: #7B241C;
-  --mc-danger-hover: #D2493A;
+  --visor-fundo: #FAF9F6;
+  --visor-superficie: #FFFFFF;
+  --visor-texto: #1E1E1E;
+  --visor-texto-suave: #55524C;
+  --visor-borda: var(--visor-navy);
 
-  --mc-nome-1: #1B5E20;   /* verde escuro */
-  --mc-nome-2: #7D6608;   /* amarelo escuro (mostarda) */
-  --mc-nome-3: #7B241C;   /* vermelho escuro */
+  /* Mantidos pra compatibilidade com todo o CSS abaixo, que ainda usa os
+     nomes antigos --mc-*. Apontam pros novos tokens VISOR. */
+  --mc-panel: var(--visor-superficie);
+  --mc-panel-light: var(--visor-superficie);
+  --mc-panel-dark: var(--visor-navy);
+  --mc-sky-top: var(--visor-fundo);
+  --mc-sky-bottom: var(--visor-fundo);
+  --mc-text-dark: var(--visor-texto);
+  --mc-button-bg: var(--visor-superficie);
+  --mc-button-light: var(--visor-navy);
+  --mc-button-dark: var(--visor-navy);
+  --mc-button-hover: var(--visor-navy);
+
+  --mc-danger-bg: var(--visor-superficie);
+  --mc-danger-light: var(--visor-vermelho);
+  --mc-danger-dark: var(--visor-vermelho);
+  --mc-danger-hover: var(--visor-vermelho);
+
+  --mc-nome-1: var(--visor-verde-escuro);
+  --mc-nome-2: var(--visor-amarelo-escuro);
+  --mc-nome-3: var(--visor-vermelho-escuro);
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  font-family: 'VT323', monospace;
-  color: var(--mc-text-dark);
-  /* Fundo do site: arte do Ken (quebra-cabeça + elementos pixel art sobre
-     azul). background-color é o fallback enquanto a imagem carrega ou caso
-     falhe. "cover" corta as bordas em telas muito largas/estreitas em vez
-     de repetir — a moldura de quebra-cabeça só existe no topo, então
-     repetir faria ela aparecer duplicada no meio da tela. */
-  background-color: var(--mc-sky-bottom);
-  /* Imagem de fundo com a opacidade reduzida em 75%: um overlay na cor do
-     céu do tema (var(--mc-sky-top)) a 75% de opacidade fica por cima da
-     imagem, deixando só 25% dela visível, sem lavar pra branco/preto. */
-  background-image: linear-gradient(rgba(126, 192, 238, 0.75), rgba(126, 192, 238, 0.75)), url('../assets/bg_capyos.png');
-  background-size: cover;
-  background-position: top center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  font-family: 'Cutive Mono', monospace;
+  color: var(--visor-texto);
+  /* Fundo liso, claro — sem textura, sem imagem: mantém o olho descansado
+     no uso prolongado do dia a dia (é uma ferramenta clínica, não uma
+     página de divulgação). */
+  background-color: var(--visor-fundo);
   min-height: 100vh;
-  /* Respeita a área segura do notch/ilha dinâmica em iPhones (viewport-fit=cover no index.html) */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
@@ -52,101 +66,85 @@ body {
 #root {
   min-height: 100vh;
 }
-/* Título / cabeçalhos no estilo pixelado */
 .mc-title {
-  font-family: 'Press Start 2P', monospace;
-  color: #fff;
-  text-shadow: 3px 3px 0 var(--mc-panel-dark);
-  letter-spacing: 1px;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  color: var(--visor-navy);
+  text-shadow: none;
+  letter-spacing: 0.02em;
 }
-/* Painel estilo inventário */
 .mc-panel {
-  background: var(--mc-panel);
-  border-top: 4px solid var(--mc-panel-light);
-  border-left: 4px solid var(--mc-panel-light);
-  border-bottom: 4px solid var(--mc-panel-dark);
-  border-right: 4px solid var(--mc-panel-dark);
+  background: var(--visor-superficie);
+  border: 2px solid var(--visor-navy);
+  border-radius: 6px;
   padding: 20px;
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.25);
+  box-shadow: 3px 3px 0 rgba(5, 55, 98, 0.12);
 }
 .mc-panel h2 {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  font-size: 15px;
   margin: 0 0 16px 0;
-  color: var(--mc-text-dark);
+  color: var(--visor-navy);
 }
-/* Botão de bloco (assinatura visual, aprovada pelo Ken) */
 .mc-button {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 12px;
-  color: #2B2B2B;
-  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.35);
-  padding: 14px 18px;
-  border: none;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--visor-navy);
+  text-shadow: none;
+  padding: 13px 18px;
+  border: 2px solid var(--visor-navy);
+  border-radius: 6px;
   cursor: pointer;
   width: 100%;
   margin-bottom: 10px;
   text-align: center;
-  transition: transform 0.05s ease, background 0.1s ease;
-  background: var(--mc-button-bg);
-  border-top: 4px solid var(--mc-button-light);
-  border-left: 4px solid var(--mc-button-light);
-  border-bottom: 4px solid var(--mc-button-dark);
-  border-right: 4px solid var(--mc-button-dark);
+  background: var(--visor-superficie);
+  transition: background 0.12s ease, color 0.12s ease, transform 0.05s ease;
 }
-/* Efeito de hover — vale pra qualquer botão .mc-button, inclusive variantes,
-   desde que não esteja desabilitado. */
 .mc-button:hover:not(.mc-button--disabled) {
-  background: var(--mc-button-hover);
-  transform: translateY(-1px);
+  background: var(--visor-navy);
+  color: var(--visor-superficie);
 }
-.mc-button:active {
-  transform: translateY(2px);
-  border-top: 4px solid var(--mc-button-dark);
-  border-left: 4px solid var(--mc-button-dark);
-  border-bottom: 4px solid var(--mc-button-light);
-  border-right: 4px solid var(--mc-button-light);
+.mc-button:active:not(.mc-button--disabled) {
+  transform: translateY(1px);
 }
 .mc-button--disabled {
-  background: #8A8A8A;
-  border-top: 4px solid #ABABAB;
-  border-left: 4px solid #ABABAB;
-  border-bottom: 4px solid #5C5C5C;
-  border-right: 4px solid #5C5C5C;
+  background: #EDEBE6;
+  border: 2px solid #B9B5AC;
+  color: #A9A59C;
   cursor: not-allowed;
-  opacity: 0.65;
+  opacity: 0.8;
 }
-
-/* Variante de botão "perigo" — usada em ações destrutivas como
-   "Pular / Deixar sem sala". */
 .mc-button--danger {
-  background: var(--mc-danger-bg);
-  color: #FFF3F3;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
-  border-top: 4px solid var(--mc-danger-light);
-  border-left: 4px solid var(--mc-danger-light);
-  border-bottom: 4px solid var(--mc-danger-dark);
-  border-right: 4px solid var(--mc-danger-dark);
+  border: 2px solid var(--visor-vermelho);
+  color: var(--visor-vermelho);
 }
 .mc-button--danger:hover:not(.mc-button--disabled) {
-  background: var(--mc-danger-hover);
+  background: var(--visor-vermelho);
+  color: var(--visor-superficie);
 }
-.mc-button--danger:active {
-  border-top: 4px solid var(--mc-danger-dark);
-  border-left: 4px solid var(--mc-danger-dark);
-  border-bottom: 4px solid var(--mc-danger-light);
-  border-right: 4px solid var(--mc-danger-light);
+.mc-button--sucesso {
+  border: 2px solid var(--visor-verde);
+  color: var(--visor-verde);
 }
-
-/* Variante usada nos botões de escolha de sala (tela de alocação manual):
-   fonte um pouco menor pra caber melhor os nomes dos ocupantes. */
+.mc-button--sucesso:hover:not(.mc-button--disabled) {
+  background: var(--visor-verde);
+  color: var(--visor-superficie);
+}
+.mc-button--atencao {
+  border: 2px solid var(--visor-amarelo-escuro);
+  color: var(--visor-amarelo-escuro);
+}
+.mc-button--atencao:hover:not(.mc-button--disabled) {
+  background: var(--visor-amarelo);
+  color: var(--visor-navy-escuro);
+}
 .mc-button--sala {
-  font-size: 10px;
+  font-size: 12px;
   padding: 11px 14px;
 }
-
-/* Cores de destaque pros nomes dos assistidos dentro dos botões de sala.
-   Tons escuros porque o fundo do botão é claro. */
 .sala-nome--0 {
   color: var(--mc-nome-1);
 }
@@ -156,8 +154,6 @@ body {
 .sala-nome--2 {
   color: var(--mc-nome-3);
 }
-
-/* Fila de pendências agrupada por horário (tela de alocação manual). */
 .fila-grupo {
   margin-bottom: 10px;
 }
@@ -165,59 +161,49 @@ body {
   margin-bottom: 0;
 }
 .fila-horario-badge {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  color: #0B3D20;
-  background: #2ecc71;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--visor-superficie);
+  background: var(--visor-verde);
+  border-radius: 4px;
   padding: 4px 8px;
   display: inline-block;
 }
 .fila-contagem {
-  font-size: 12px;
-  color: #9a9a9a;
+  font-size: 13px;
+  color: var(--visor-texto-suave);
   margin-left: 8px;
 }
 .fila-nomes {
-  border-left: 2px solid #444444;
+  border-left: 2px solid var(--visor-navy);
   padding-left: 10px;
   margin-top: 4px;
 }
 .fila-nome {
   font-size: 14px;
-  color: #e6e6e6;
+  color: var(--visor-texto);
   margin: 2px 0;
 }
-
-/* Texto "ALOCANDO AGORA: fulano (horário)" — contorno escuro pra garantir
-   contraste do verde claro contra o painel claro. */
 .alocando-agora {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
-  color: #2ecc71;
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--visor-verde-escuro);
   text-align: center;
   margin-bottom: 12px;
   line-height: 1.5;
-  text-shadow:
-    -1px -1px 0 #000,
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000,
-     0    2px 0 #000;
+  text-shadow: none;
 }
-
-/* Capivara (gif do Ken) */
 .capybara {
   width: 120px;
   height: auto;
-  image-rendering: pixelated;
   animation: capybara-breathe 2.4s ease-in-out infinite;
 }
 @keyframes capybara-breathe {
   0%, 100% { transform: scale(1) translateY(0); }
   50% { transform: scale(1.02) translateY(-2px); }
 }
-
-/* ===== Tela de loading ("acordando servidor") ===== */
 .tela-loading {
   min-height: 100vh;
   width: 100%;
@@ -231,73 +217,66 @@ body {
 .tela-loading .capybara {
   width: 140px;
   margin-bottom: 20px;
-  /* aqui a capivara já está andando (gif), não precisa da respiração do parado */
   animation: none;
 }
 .loading-texto {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
-  color: #fff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--visor-navy);
+  text-shadow: none;
   margin-bottom: 8px;
 }
 .loading-subtexto {
-  font-size: 18px;
-  color: #F0F8FF;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+  font-size: 16px;
+  color: var(--visor-texto-suave);
+  text-shadow: none;
   margin-bottom: 24px;
 }
 .loading-barra-container {
   width: 100%;
   max-width: 320px;
-  height: 20px;
-  background: var(--mc-panel-dark);
-  border-top: 3px solid var(--mc-panel-dark);
-  border-left: 3px solid var(--mc-panel-dark);
-  border-bottom: 3px solid var(--mc-panel-light);
-  border-right: 3px solid var(--mc-panel-light);
+  height: 14px;
+  background: var(--visor-superficie);
+  border: 2px solid var(--visor-navy);
+  border-radius: 4px;
   overflow: hidden;
   position: relative;
 }
-/* Barra indeterminada: como o tempo de cold start do Render varia,
-   não fingimos uma porcentagem — só um bloco animando de um lado a
-   outro, junto com o contador de segundos no texto acima. */
 .loading-barra-preenchimento {
   position: absolute;
   top: 0;
   left: 0;
   height: 100%;
   width: 40%;
-  background: #2ecc71;
+  background: var(--visor-verde);
   animation: loading-indeterminado 1.4s ease-in-out infinite;
 }
 @keyframes loading-indeterminado {
   0% { left: -40%; }
   100% { left: 100%; }
 }
-
-/* Telas pequenas de celular (iPhone SE, Android compacto, etc.) */
 @media (max-width: 380px) {
   .mc-panel {
     padding: 14px;
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25);
+    box-shadow: 2px 2px 0 rgba(5, 55, 98, 0.12);
   }
   .mc-panel h2 {
-    font-size: 11px;
+    font-size: 13px;
   }
   .mc-title {
     font-size: 18px !important;
   }
   .mc-button {
-    font-size: 11px;
+    font-size: 13px;
     padding: 12px 14px;
   }
   .mc-button--sala {
-    font-size: 9px;
+    font-size: 11px;
     padding: 9px 12px;
   }
   .alocando-agora {
-    font-size: 11px;
+    font-size: 12px;
   }
   .capybara {
     width: 90px;
@@ -306,13 +285,12 @@ body {
     width: 100px;
   }
   .loading-texto {
-    font-size: 11px;
+    font-size: 13px;
   }
   .loading-subtexto {
-    font-size: 15px;
+    font-size: 14px;
   }
 }
-/* Telas bem baixas (celular em modo paisagem) — evita cortar conteúdo */
 @media (max-height: 480px) and (orientation: landscape) {
   .capybara {
     width: 60px;
