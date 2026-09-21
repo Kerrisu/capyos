@@ -651,13 +651,13 @@ export default function AppAplicadores() {
           <Capybara pose="andando" />
         </div>
         <h2 className="mc-title" style={{ fontSize: 20, marginBottom: 20, textAlign: 'center', lineHeight: '1.4' }}>
-          CapyOS <br/> <span style={{ fontSize: 14, color: '#F0F8FF' }}>Aplicadores</span>
+          VISOR <br/> <span style={{ fontSize: 14, color: 'var(--visor-texto-suave)' }}>Instituto do Autismo</span>
         </h2>
         <div style={{ width: '100%' }}>
           <MinecraftPanel title="Acesso Restrito">
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
-              <input type="text" placeholder="Seu login" value={loginInput} onChange={(e) => setLoginInput(e.target.value)} style={{ padding: '12px', fontFamily: '"Press Start 2P", monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} required />
-              <input type="password" placeholder="Sua senha" value={senhaInput} onChange={(e) => setSenhaInput(e.target.value)} style={{ padding: '12px', fontFamily: '"Press Start 2P", monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} required />
+              <input type="text" placeholder="Seu login" value={loginInput} onChange={(e) => setLoginInput(e.target.value)} style={{ padding: '12px', fontFamily: '"Cutive Mono", monospace', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} required />
+              <input type="password" placeholder="Sua senha" value={senhaInput} onChange={(e) => setSenhaInput(e.target.value)} style={{ padding: '12px', fontFamily: '"Cutive Mono", monospace', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} required />
               <MinecraftButton type="submit" onClick={() => {}}>{carregando ? 'Entrando...' : 'Entrar'}</MinecraftButton>
               {erro && <p style={{ color: '#ff5555', fontSize: '12px', textAlign: 'center', margin: 0, textShadow: '1px 1px 0 #000' }}>{erro}</p>}
             </form>
@@ -808,25 +808,25 @@ export default function AppAplicadores() {
                     onChange={(e) => { setRelatoBuscaAssistido(e.target.value); setRelatoAssistidoEscolhido(''); setRelatoDropdownAberto(true); }}
                     onFocus={() => setRelatoDropdownAberto(true)}
                     onBlur={() => setTimeout(() => setRelatoDropdownAberto(false), 150)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }}
                   />
                   {relatoDropdownAberto && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, backgroundColor: '#fff', border: '2px solid #555', maxHeight: '200px', overflowY: 'auto', boxShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>
                       {assistidosFiltrados.length === 0 && (
-                        <div style={{ padding: '8px 10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#777' }}>Nenhum assistido encontrado</div>
+                        <div style={{ padding: '8px 10px', fontFamily: '"Cutive Mono", monospace', fontSize: '9px', color: '#777' }}>Nenhum assistido encontrado</div>
                       )}
                       {assistidosFiltrados.map((nome) => (
                         <div
                           key={nome}
                           onMouseDown={() => escolherAssistidoRelato(nome)}
-                          style={{ padding: '8px 10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', cursor: 'pointer', borderBottom: '1px solid #ccc' }}
+                          style={{ padding: '8px 10px', fontFamily: '"Cutive Mono", monospace', fontSize: '9px', cursor: 'pointer', borderBottom: '1px solid #ccc' }}
                         >
                           {nome}
                         </div>
                       ))}
                       <div
                         onMouseDown={ativarModoManualRelato}
-                        style={{ padding: '8px 10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', cursor: 'pointer', color: '#4C3A8F' }}
+                        style={{ padding: '8px 10px', fontFamily: '"Cutive Mono", monospace', fontSize: '9px', cursor: 'pointer', color: '#053762' }}
                       >
                         ➕ Outro (nome não está na lista)
                       </div>
@@ -840,26 +840,26 @@ export default function AppAplicadores() {
                     placeholder="Nome completo do assistido"
                     value={relatoAssistidoManual}
                     onChange={(e) => setRelatoAssistidoManual(e.target.value)}
-                    style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                    style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }}
                   />
-                  <span onClick={voltarParaListaRelato} style={{ fontSize: '9px', color: '#4C3A8F', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'flex-start' }}>← voltar pra lista</span>
+                  <span onClick={voltarParaListaRelato} style={{ fontSize: '9px', color: '#053762', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'flex-start' }}>← voltar pra lista</span>
                 </div>
               )}
 
-              <select value={relatoDiaSemana} onChange={(e) => setRelatoDiaSemana(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+              <select value={relatoDiaSemana} onChange={(e) => setRelatoDiaSemana(e.target.value)} style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
                 <option value="">Dia da semana...</option>
                 {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
               </select>
 
               <div>
-                <p style={{ fontSize: '10px', color: '#333', margin: '0 0 6px 0', fontFamily: '"Press Start 2P", monospace' }}>
+                <p style={{ fontSize: '10px', color: '#333', margin: '0 0 6px 0', fontFamily: '"Cutive Mono", monospace' }}>
                   Horário(s) — marque quantos precisar:
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {HORARIOS_RELATO.map(h => (
                     <label
                       key={h}
-                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', border: '2px solid #555', backgroundColor: relatoHorarios.includes(h) ? '#a8e6cf' : '#d9d9d9', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '9px' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', border: '2px solid #555', backgroundColor: relatoHorarios.includes(h) ? '#a8e6cf' : '#d9d9d9', cursor: 'pointer', fontFamily: '"Cutive Mono", monospace', fontSize: '9px' }}
                     >
                       <input
                         type="checkbox"
@@ -873,7 +873,7 @@ export default function AppAplicadores() {
                 </div>
               </div>
 
-              <select value={relatoTipo} onChange={(e) => setRelatoTipo(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+              <select value={relatoTipo} onChange={(e) => setRelatoTipo(e.target.value)} style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
                 <option value="">O que aconteceu?</option>
                 <option value="sem_aba">Está sem ABA no TITA</option>
                 <option value="perdeu_sessao">Não possui mais essa sessão</option>
@@ -884,7 +884,7 @@ export default function AppAplicadores() {
                 onChange={(e) => setRelatoObservacao(e.target.value)}
                 placeholder="Observação (opcional)"
                 rows={2}
-                style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)', resize: 'vertical' }}
+                style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none', resize: 'vertical' }}
               />
 
               <MinecraftButton
@@ -900,7 +900,7 @@ export default function AppAplicadores() {
               </MinecraftButton>
 
               {mensagemRelato && (
-                <p style={{ color: mensagemRelato.ok ? '#1d5930' : '#a83232', fontSize: '11px', textAlign: 'center', margin: 0, fontFamily: '"Press Start 2P", monospace' }}>
+                <p style={{ color: mensagemRelato.ok ? '#1d5930' : '#a83232', fontSize: '11px', textAlign: 'center', margin: 0, fontFamily: '"Cutive Mono", monospace' }}>
                   {mensagemRelato.texto}
                 </p>
               )}
@@ -924,20 +924,20 @@ export default function AppAplicadores() {
                   onChange={(e) => setTextoBulk(e.target.value)}
                   placeholder={"08/09/2026;09:00;LUCAS EDUARDO;ALICIA VITÓRIA;\n09/09/2026;14:30;GABRIEL NOVAES;VINICIUS GOMES;"}
                   rows={5}
-                  style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)', resize: 'vertical' }}
+                  style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none', resize: 'vertical' }}
                 />
                 <MinecraftButton onClick={handleEnviarBulk} disabled={carregandoBulk || !textoBulk.trim()}>
                   {carregandoBulk ? 'Enviando...' : 'Cadastrar Titas'}
                 </MinecraftButton>
 
                 {resultadoBulk && (
-                  <div style={{ fontSize: '10px', fontFamily: '"Press Start 2P", monospace', lineHeight: '1.8' }}>
+                  <div style={{ fontSize: '10px', fontFamily: '"Cutive Mono", monospace', lineHeight: '1.8' }}>
                     <p style={{ color: '#1d5930', margin: '4px 0' }}>✅ {resultadoBulk.inseridos} tita(s) cadastrado(s)</p>
                     {resultadoBulk.erros.length > 0 && (
                       <div style={{ color: '#a83232' }}>
                         <p style={{ margin: '8px 0 4px 0' }}>❌ {resultadoBulk.erros.length} não cadastrado(s):</p>
                         {resultadoBulk.erros.map((e, i) => (
-                          <p key={i} style={{ margin: '2px 0 10px 0', fontFamily: '"Press Start 2P", monospace', fontSize: '8px', lineHeight: '1.7', backgroundColor: '#fdeaea', padding: '8px', border: '1px solid #e0b4b4', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{e}</p>
+                          <p key={i} style={{ margin: '2px 0 10px 0', fontFamily: '"Cutive Mono", monospace', fontSize: '8px', lineHeight: '1.7', backgroundColor: '#fdeaea', padding: '8px', border: '1px solid #e0b4b4', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{e}</p>
                         ))}
                       </div>
                     )}
@@ -954,7 +954,7 @@ export default function AppAplicadores() {
         <div style={{ width: '100%', marginTop: '20px' }}>
           <MinecraftPanel title="Fila de Aprovação">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
-              <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
+              <p style={{ fontFamily: '"Cutive Mono", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
                 {pendenciasParaAprovacao.length} tita(s) aguardando remoção
               </p>
               <MinecraftButton onClick={handleToggleSelecionarTodos} style={{ fontSize: '9px', padding: '8px 10px', alignSelf: 'flex-start' }}>
@@ -964,7 +964,7 @@ export default function AppAplicadores() {
                 {pendenciasParaAprovacao.map((p) => (
                   <label
                     key={p.id}
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#a8e6cf', border: '2px solid #3b7d4f', cursor: 'pointer', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#000' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#a8e6cf', border: '2px solid #3b7d4f', cursor: 'pointer', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', color: '#000' }}
                   >
                     <input
                       type="checkbox"
@@ -1002,11 +1002,11 @@ export default function AppAplicadores() {
 
                 {/* Filtros */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <select value={filtroRelatoDia} onChange={(e) => setFiltroRelatoDia(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                  <select value={filtroRelatoDia} onChange={(e) => setFiltroRelatoDia(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '9px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
                     <option value="">Todos os dias</option>
                     {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
                   </select>
-                  <select value={filtroRelatoTipo} onChange={(e) => setFiltroRelatoTipo(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                  <select value={filtroRelatoTipo} onChange={(e) => setFiltroRelatoTipo(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '9px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
                     <option value="">Todos os tipos</option>
                     <option value="sem_aba">Está sem ABA no TITA</option>
                     <option value="perdeu_sessao">Não possui mais essa sessão</option>
@@ -1018,7 +1018,7 @@ export default function AppAplicadores() {
                 )}
 
                 {!carregandoRelatos && relatos.length === 0 && (
-                  <p style={{ textAlign: 'center', fontSize: '11px', color: '#555', margin: '10px 0', fontFamily: '"Press Start 2P", monospace' }}>
+                  <p style={{ textAlign: 'center', fontSize: '11px', color: '#555', margin: '10px 0', fontFamily: '"Cutive Mono", monospace' }}>
                     Nenhum relato encontrado 🎉
                   </p>
                 )}
@@ -1040,7 +1040,7 @@ export default function AppAplicadores() {
                       {relatos.map((r) => (
                         <label
                           key={r.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: r.tipo === 'sem_aba' ? '#ffd8a8' : '#ffc9c9', border: '2px solid #555', cursor: modoRemocaoRelatos ? 'pointer' : 'default', fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#000' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: r.tipo === 'sem_aba' ? '#ffd8a8' : '#ffc9c9', border: '2px solid #555', cursor: modoRemocaoRelatos ? 'pointer' : 'default', fontFamily: '"Cutive Mono", monospace', fontSize: '9px', color: '#000' }}
                         >
                           {modoRemocaoRelatos && (
                             <input
@@ -1052,7 +1052,7 @@ export default function AppAplicadores() {
                           )}
                           <span style={{ lineHeight: '1.6' }}>
                             {r.assistido} <span style={{ color: '#333' }}>— {capitalizar(r.dia_semana)}, {r.horario}</span><br />
-                            <span style={{ color: '#4C3A8F' }}>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</span> · <span style={{ color: '#555' }}>relatado por {r.aplicador}</span>
+                            <span style={{ color: '#053762' }}>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</span> · <span style={{ color: '#555' }}>relatado por {r.aplicador}</span>
                             {r.observacao && <><br /><span style={{ color: '#555' }}>Obs: {r.observacao}</span></>}
                           </span>
                         </label>
@@ -1086,17 +1086,17 @@ export default function AppAplicadores() {
         <div style={{ width: '100%' }}>
           <MinecraftPanel title="Gerenciar Aplicadores">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '4px' }}>
-                <p style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
+                <p style={{ fontFamily: '"Cutive Mono", monospace', fontSize: '10px', color: '#111', textShadow: '1px 1px 0px #fff', margin: 0 }}>
                   {usuarios.length} usuário(s) cadastrado(s)
                 </p>
 
                 {/* Formulário de criação */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: '"Press Start 2P", monospace' }}>Novo aplicador/coordenação</p>
-                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
-                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
-                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }} />
-                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} style={{ padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none' }}>
+                  <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: '"Cutive Mono", monospace' }}>Novo aplicador/coordenação</p>
+                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} />
+                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} />
+                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} />
+                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} style={{ padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
                     <option value="aplicador">Aplicador</option>
                     <option value="coordenacao">Coordenação</option>
                   </select>
@@ -1111,7 +1111,7 @@ export default function AppAplicadores() {
                   {usuarios.map((u) => (
                     <div
                       key={u.login}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#C6C6C6', border: '2px solid', borderColor: '#fff #555 #555 #fff', fontFamily: '"Press Start 2P", monospace', fontSize: '10px' }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#C6C6C6', border: '2px solid', borderColor: '#fff #555 #555 #fff', fontFamily: '"Cutive Mono", monospace', fontSize: '10px' }}
                     >
                       <div>
                         <div style={{ color: '#000' }}>{u.nome} {u.login === loginAtual && '(você)'}</div>
@@ -1139,7 +1139,7 @@ export default function AppAplicadores() {
       <div style={{ width: '100%' }}>
         <MinecraftPanel title="Lista de Titas">
           {pendencias.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '12px', fontFamily: '"Press Start 2P", monospace', lineHeight: '1.6' }}>
+            <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '12px', fontFamily: '"Cutive Mono", monospace', lineHeight: '1.6' }}>
               Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉
             </p>
           ) : (
@@ -1153,7 +1153,7 @@ export default function AppAplicadores() {
                     placeholder="Buscar aplicador..."
                     value={buscaAplicador}
                     onChange={(e) => setBuscaAplicador(e.target.value)}
-                    style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: '"Press Start 2P", monospace', fontSize: '10px', border: '2px solid #555', backgroundColor: '#d9d9d9', outline: 'none', boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.3)' }}
+                    style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: '"Cutive Mono", monospace', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }}
                   />
                   <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
                     {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
@@ -1162,7 +1162,7 @@ export default function AppAplicadores() {
               )}
 
               {aplicadoresFiltrados.length === 0 && (
-                <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: '"Press Start 2P", monospace' }}>
+                <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: '"Cutive Mono", monospace' }}>
                   Nenhum aplicador encontrado
                 </p>
               )}
@@ -1180,10 +1180,10 @@ export default function AppAplicadores() {
                       onClick={() => toggleGrupo(aplicador)}
                       style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', margin: '0 0 10px 0', borderBottom: '2px solid #555', paddingBottom: '6px' }}
                     >
-                      <h3 style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '12px', color: '#4C3A8F', textShadow: '1px 1px 0px #fff', margin: 0 }}>
+                      <h3 style={{ fontFamily: '"Cutive Mono", monospace', fontSize: '12px', color: '#053762', textShadow: '1px 1px 0px #fff', margin: 0 }}>
                         {aberto ? '▼' : '▶'} {aplicador}
                       </h3>
-                      <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: totalPendentes > 0 ? '#a83232' : '#1d5930', textShadow: '1px 1px 0px #fff' }}>
+                      <span style={{ fontFamily: '"Cutive Mono", monospace', fontSize: '10px', color: totalPendentes > 0 ? '#a83232' : '#1d5930', textShadow: '1px 1px 0px #fff' }}>
                         {totalPendentes} pendente{totalPendentes !== 1 ? 's' : ''}
                       </span>
                     </div>
@@ -1197,7 +1197,7 @@ export default function AppAplicadores() {
                             onClick={() => toggleFeito(p.id, p.feito)}
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', backgroundColor: p.feito ? '#a8e6cf' : '#C6C6C6', border: '2px solid', borderColor: p.feito ? '#3b7d4f' : '#fff #555 #555 #fff', boxShadow: p.feito ? 'inset -2px -2px 0px rgba(0,0,0,0.2)' : 'inset -2px -2px 0px #555, inset 2px 2px 0px #fff', cursor: 'pointer', imageRendering: 'pixelated' }}
                           >
-                            <div style={{ fontFamily: '"Press Start 2P", monospace' }}>
+                            <div style={{ fontFamily: '"Cutive Mono", monospace' }}>
                               <div style={{ fontSize: '10px', color: '#333', marginBottom: '8px' }}>{formatarDataPorExtenso(p.data)} ({p.dia_semana}) - {p.horario}</div>
                               <div style={{ fontSize: '12px', color: '#000', lineHeight: '1.4' }}>Tita: <strong style={{ color: p.feito ? '#1d5930' : '#000' }}>{p.tita}</strong></div>
                               {!p.feito && (

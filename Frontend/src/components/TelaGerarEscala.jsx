@@ -88,7 +88,7 @@ function NomeArrastavel({ id, nome, dragData, disabled, destaque }) {
     background: destaque ? "#4a3a00" : "#3a3a3a",
     border: `2px solid ${destaque ? "#FFD700" : "#666"}`,
     color: destaque ? "#FFD700" : "#f0f0f0",
-    fontFamily: "VT323, monospace",
+    fontFamily: "Cutive Mono, monospace",
     fontSize: 16,
     cursor: disabled ? "default" : isDragging ? "grabbing" : "grab",
     opacity: disabled ? 0.35 : isDragging ? 0.5 : 1,
@@ -138,10 +138,10 @@ function SalaSlot({ sala, horario, ocupantes, onClickSala }) {
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ color: "#e8e8e8", fontFamily: "VT323, monospace", fontSize: 17 }}>{sala}</span>
+        <span style={{ color: "#e8e8e8", fontFamily: "Cutive Mono, monospace", fontSize: 17 }}>{sala}</span>
         <span
           style={{
-            fontFamily: "VT323, monospace",
+            fontFamily: "Cutive Mono, monospace",
             fontSize: 13,
             padding: "1px 6px",
             border: `1px solid ${corContagem}`,
@@ -154,7 +154,7 @@ function SalaSlot({ sala, horario, ocupantes, onClickSala }) {
 
       <div style={{ minHeight: 30, marginBottom: 6 }}>
         {nomes.length === 0 && (
-          <span style={{ color: "#666", fontFamily: "VT323, monospace", fontSize: 14, fontStyle: "italic" }}>
+          <span style={{ color: "#666", fontFamily: "Cutive Mono, monospace", fontSize: 14, fontStyle: "italic" }}>
             (vazia)
           </span>
         )}
@@ -421,7 +421,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                 fontSize: 16,
                 padding: 8,
                 marginBottom: 14,
-                fontFamily: "VT323, monospace",
+                fontFamily: "Cutive Mono, monospace",
               }}
             >
               {abas.map((aba) => (
@@ -468,7 +468,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                           display: "inline-block",
                           background: "#2E7D32",
                           color: "#fff",
-                          fontFamily: "VT323, monospace",
+                          fontFamily: "Cutive Mono, monospace",
                           fontSize: 16,
                           padding: "2px 8px",
                           marginRight: 8,
@@ -476,7 +476,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                       >
                         {grupo.horario}
                       </span>
-                      <span style={{ color: "#aaa", fontFamily: "VT323, monospace", fontSize: 14 }}>
+                      <span style={{ color: "#aaa", fontFamily: "Cutive Mono, monospace", fontSize: 14 }}>
                         {grupo.itens.length} {grupo.itens.length === 1 ? "assistido" : "assistidos"}
                       </span>
                       <div style={{ marginTop: 4 }}>
@@ -568,7 +568,7 @@ export default function TelaGerarEscala({ onVoltar }) {
                 maxHeight: 260,
                 overflowY: "auto",
                 fontSize: 15,
-                fontFamily: "VT323, monospace",
+                fontFamily: "Cutive Mono, monospace",
                 whiteSpace: "pre-wrap",
                 marginBottom: 14,
                 border: "2px solid #373737",

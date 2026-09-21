@@ -47,7 +47,7 @@ export default function TelaLoading({ onPronto }) {
 
   return (
     <div className="tela-loading">
-      <img src={ICONE_CAPYOS} alt="Capivara CapyOS" className="capybara" />
+      <img src={ICONE_CAPYOS} alt="Logo VISOR" className="capybara" />
       <p className="loading-texto">ACORDANDO O SERVIDOR...</p>
       <p className="loading-subtexto">
         Isso pode levar cerca de 1 minuto ({segundos}s)

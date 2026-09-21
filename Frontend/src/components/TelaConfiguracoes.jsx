@@ -26,7 +26,7 @@ const inputStyle = {
   fontSize: 16,
   padding: 8,
   marginBottom: 14,
-  fontFamily: "VT323, monospace",
+  fontFamily: "Cutive Mono, monospace",
   border: "2px solid #373737",
 };
 
@@ -280,7 +280,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
                     display: "inline-flex",
                     alignItems: "center",
                     fontSize: 14,
-                    fontFamily: "VT323, monospace",
+                    fontFamily: "Cutive Mono, monospace",
                     padding: "3px 6px",
                     border: "2px solid #373737",
                     background: "#F0F8FF",
@@ -295,7 +295,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
                     title={`Remover ${sala}`}
                     style={{
                       marginLeft: 6,
-                      fontFamily: "VT323, monospace",
+                      fontFamily: "Cutive Mono, monospace",
                       fontSize: 14,
                       border: "none",
                       background: "transparent",
@@ -394,7 +394,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
                   onClick={() => removerAplicador(nomeAplicador)}
                   disabled={estado === "salvando"}
                   style={{
-                    fontFamily: "VT323, monospace",
+                    fontFamily: "Cutive Mono, monospace",
                     fontSize: 14,
                     padding: "2px 8px",
                     border: "2px solid #373737",

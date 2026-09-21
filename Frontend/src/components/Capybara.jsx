@@ -5,6 +5,6 @@
 // `pose` não faz mais nada, sempre renderiza o mesmo ícone.
 const ICONE_CAPYOS = "/icons/icon-192.png";
 
-export default function Capybara({ pose, alt = "Capivara CapyOS" }) {
+export default function Capybara({ pose, alt = "Logo VISOR" }) {
   return <img src={ICONE_CAPYOS} alt={alt} className="capybara" />;
 }
