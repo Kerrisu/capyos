@@ -683,23 +683,17 @@ export default function AppAplicadores() {
     'gerar-escala': 'home',
   };
 
-  // Renderiza uma lista de botões em pares lado a lado (estilo Minecraft:
-  // Options.../Quit Game), sobrando um sozinho na linha se for número ímpar
-  const renderBotoesEmPares = (botoes) => {
-    const linhas = [];
-    for (let i = 0; i < botoes.length; i += 2) {
-      linhas.push(botoes.slice(i, i + 2));
-    }
-    return linhas.map((linha, idx) => (
-      <div key={idx} style={{ display: 'flex', gap: '12px', width: '100%', marginBottom: '10px' }}>
-        {linha.map((b) => (
-          <MinecraftButton key={b.label} onClick={b.onClick} style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
-            {b.label}
-          </MinecraftButton>
-        ))}
-      </div>
-    ));
-  };
+  // Renderiza uma lista de botões empilhados, um por linha, ocupando a
+  // largura toda
+  const renderBotoesEmPares = (botoes) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+      {botoes.map((b) => (
+        <MinecraftButton key={b.label} onClick={b.onClick} style={{ width: '100%', marginBottom: 0 }}>
+          {b.label}
+        </MinecraftButton>
+      ))}
+    </div>
+  );
 
   // Pro aplicador, Lista de Titas e Relatar Sessão sem ABA ficam direto na
   // tela principal — não fazia sentido esconder atrás de "Pendências" quando
