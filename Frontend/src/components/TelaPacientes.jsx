@@ -12,7 +12,7 @@ function Badge({ ativo, label }) {
       style={{
         display: "inline-block",
         fontSize: 13,
-        fontFamily: "Cutive Mono, monospace",
+        fontFamily: "Arial, Helvetica, sans-serif",
         padding: "2px 6px",
         marginRight: 6,
         marginBottom: 4,
@@ -153,7 +153,7 @@ export default function TelaPacientes({ onVoltar }) {
                 padding: 8,
                 marginTop: 10,
                 marginBottom: 10,
-                fontFamily: "Cutive Mono, monospace",
+                fontFamily: "Arial, Helvetica, sans-serif",
                 border: "2px solid #373737",
               }}
             />
@@ -203,7 +203,7 @@ export default function TelaPacientes({ onVoltar }) {
                           setVista("form");
                         }}
                         style={{
-                          fontFamily: "Cutive Mono, monospace",
+                          fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: 14,
                           padding: "3px 10px",
                           border: "2px solid #373737",
@@ -220,7 +220,7 @@ export default function TelaPacientes({ onVoltar }) {
                           setConfirmandoRemocao(nome);
                         }}
                         style={{
-                          fontFamily: "Cutive Mono, monospace",
+                          fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: 14,
                           padding: "3px 10px",
                           border: "2px solid #373737",
@@ -256,7 +256,7 @@ export default function TelaPacientes({ onVoltar }) {
                           onClick={() => handleConfirmarRemocao(nome)}
                           disabled={removendoNome === nome}
                           style={{
-                            fontFamily: "Cutive Mono, monospace",
+                            fontFamily: "Arial, Helvetica, sans-serif",
                             fontSize: 14,
                             padding: "3px 10px",
                             border: "2px solid #373737",
@@ -271,7 +271,7 @@ export default function TelaPacientes({ onVoltar }) {
                           onClick={() => setConfirmandoRemocao(null)}
                           disabled={removendoNome === nome}
                           style={{
-                            fontFamily: "Cutive Mono, monospace",
+                            fontFamily: "Arial, Helvetica, sans-serif",
                             fontSize: 14,
                             padding: "3px 10px",
                             border: "2px solid #373737",

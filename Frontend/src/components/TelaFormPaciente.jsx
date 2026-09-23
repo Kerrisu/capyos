@@ -23,7 +23,7 @@ const inputStyle = {
   fontSize: 16,
   padding: 8,
   marginBottom: 14,
-  fontFamily: "Cutive Mono, monospace",
+  fontFamily: "Arial, Helvetica, sans-serif",
   border: "2px solid #373737",
 };
 
@@ -219,7 +219,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
                     }}
                     disabled={estado === "salvando"}
                     style={{
-                      fontFamily: "Cutive Mono, monospace",
+                      fontFamily: "Arial, Helvetica, sans-serif",
                       fontSize: 14,
                       padding: "3px 8px",
                       border: "2px solid #373737",
