@@ -5,7 +5,7 @@
    Os seletores continuam com o prefixo "mc-" por enquanto (mexer neles
    também exigiria atualizar className em vários arquivos) — é só um nome
    interno, não aparece pra ninguém; renomear fica como possível limpeza
-   futura, sem pressa. A fonte (Cutive Mono) é carregada via <link> no
+   futura, sem pressa. A fonte (Arial) é carregada via <link> no
    index.html. */
 :root {
   /* Paleta oficial VISOR, extraída da logo do Instituto do Autismo */
@@ -51,7 +51,7 @@
 }
 body {
   margin: 0;
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   color: var(--visor-texto);
   /* Fundo liso, claro — sem textura, sem imagem: mantém o olho descansado
      no uso prolongado do dia a dia (é uma ferramenta clínica, não uma
@@ -75,7 +75,7 @@ body {
   min-height: 100vh;
 }
 .mc-title {
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   color: var(--visor-navy);
   text-shadow: none;
@@ -89,25 +89,29 @@ body {
   box-shadow: 3px 3px 0 rgba(5, 55, 98, 0.12);
 }
 .mc-panel h2 {
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   font-size: 15px;
   margin: 0 0 16px 0;
   color: var(--visor-navy);
 }
 .mc-button {
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   font-size: 14px;
   color: var(--visor-navy);
   text-shadow: none;
-  padding: 13px 18px;
+  padding: 13px 20px;
   border: 2px solid var(--visor-navy);
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: pointer;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin-bottom: 10px;
   text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
   background: var(--visor-superficie);
   transition: background 0.12s ease, color 0.12s ease, transform 0.05s ease;
 }
@@ -169,7 +173,7 @@ body {
   margin-bottom: 0;
 }
 .fila-horario-badge {
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: var(--visor-superficie);
@@ -194,7 +198,7 @@ body {
   margin: 2px 0;
 }
 .alocando-agora {
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   font-size: 14px;
   color: var(--visor-verde-escuro);
@@ -228,7 +232,7 @@ body {
   animation: none;
 }
 .loading-texto {
-  font-family: 'Cutive Mono', monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
   font-size: 15px;
   color: var(--visor-navy);

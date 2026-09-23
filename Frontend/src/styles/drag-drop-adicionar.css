@@ -7,7 +7,7 @@
   background: #3a3a3a;
   border: 2px solid #555;
   color: #e8e8e8;
-  font-family: "Cutive Mono", monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 15px;
   cursor: grab;
   touch-action: none;
@@ -60,12 +60,12 @@
 
 .sala-slot__nome {
   color: #e8e8e8;
-  font-family: "Cutive Mono", monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 16px;
 }
 
 .sala-slot__contagem {
-  font-family: "Cutive Mono", monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 13px;
   padding: 1px 6px;
   border: 1px solid;
@@ -93,7 +93,7 @@
 
 .sala-slot__vazia-label {
   color: #666;
-  font-family: "Cutive Mono", monospace;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 14px;
   font-style: italic;
 }
