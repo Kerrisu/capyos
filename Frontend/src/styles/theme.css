@@ -97,8 +97,8 @@ body {
 }
 .mc-button {
   font-family: Arial, Helvetica, sans-serif;
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 800;
+  font-size: 17px;
   color: var(--visor-navy);
   text-shadow: none;
   padding: 13px 20px;
@@ -280,7 +280,7 @@ body {
     font-size: 18px !important;
   }
   .mc-button {
-    font-size: 13px;
+    font-size: 15px;
     padding: 12px 14px;
   }
   .mc-button--sala {
