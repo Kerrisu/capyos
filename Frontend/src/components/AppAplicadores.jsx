@@ -713,7 +713,7 @@ export default function AppAplicadores() {
     { label: 'Lista de Titas', onClick: () => setTela('titas') },
     { label: 'Relatar Sessão sem ABA', onClick: () => setTela('relatar-aba') },
     { label: 'Cadastro em Massa', onClick: () => setTela('cadastro-massa') },
-    { label: 'Relatos de Sessão sem ABA', onClick: () => setTela('relatos-aba') },
+    { label: 'Relatório de ABA no TiTa', onClick: () => setTela('relatos-aba') },
     { label: '← Voltar', onClick: () => setTela('home') },
   ];
 
@@ -743,7 +743,9 @@ export default function AppAplicadores() {
         <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ width: '100%' }}>
             {renderBotoesEmPares(botoesMenuPrincipal)}
-            {renderBotoesEmPares([{ label: 'Sair', onClick: handleLogout }])}
+            <div style={{ marginTop: '32px' }}>
+              {renderBotoesEmPares([{ label: 'Sair', onClick: handleLogout }])}
+            </div>
           </div>
         </div>
       )}
@@ -991,7 +993,7 @@ export default function AppAplicadores() {
       {/* ================================================= */}
       {isCoordenacao && tela === 'relatos-aba' && (
         <div style={{ width: '100%' }}>
-          <MinecraftPanel title="Relatos de Sessão sem ABA">
+          <MinecraftPanel title="Relatório de ABA no TiTa">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
 
                 {/* Filtros */}
