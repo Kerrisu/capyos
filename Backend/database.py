@@ -158,8 +158,14 @@ def criar_tabelas():
                     horario VARCHAR(10),
                     tita VARCHAR(255),
                     aplicador VARCHAR(255),
-                    tipo VARCHAR(20) NOT NULL -- 'REFERENCIA' ou 'PISCINA'
+                    tipo VARCHAR(20) NOT NULL, -- 'REFERENCIA' ou 'PISCINA'
+                    conflito BOOLEAN NOT NULL DEFAULT FALSE -- true = mesma tita/horário com 2 aplicadores na planilha (erro de preenchimento), precisa checagem manual
                 );
+            """)
+            # --- Migração pra quem já tinha essa tabela sem a coluna conflito
+            cur.execute("""
+                ALTER TABLE sessoes_direcionamento
+                    ADD COLUMN IF NOT EXISTS conflito BOOLEAN NOT NULL DEFAULT FALSE;
             """)
 
             # --- Migração pra bancos que já existiam antes dessas colunas
@@ -612,9 +618,9 @@ def inserir_sessoes_direcionamento(execucao_id: int, data_referencia, dia_semana
         with conn.cursor() as cur:
             cur.executemany("""
                 INSERT INTO sessoes_direcionamento
-                    (execucao_id, data_referencia, dia_semana, horario, tita, aplicador, tipo)
+                    (execucao_id, data_referencia, dia_semana, horario, tita, aplicador, tipo, conflito)
                 VALUES (%(execucao_id)s, %(data_referencia)s, %(dia_semana)s, %(horario)s,
-                        %(tita)s, %(aplicador)s, %(tipo)s);
+                        %(tita)s, %(aplicador)s, %(tipo)s, %(conflito)s);
             """, [
                 {
                     "execucao_id": execucao_id,
@@ -624,6 +630,7 @@ def inserir_sessoes_direcionamento(execucao_id: int, data_referencia, dia_semana
                     "tita": s.get("tita"),
                     "aplicador": s.get("aplicador"),
                     "tipo": s.get("tipo"),
+                    "conflito": s.get("conflito", False),
                 }
                 for s in sessoes
             ])
@@ -688,7 +695,7 @@ def listar_sessoes_direcionamento(execucao_id: int) -> list[dict]:
     try:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute("""
-                SELECT id, execucao_id, data_referencia, dia_semana, horario, tita, aplicador, tipo
+                SELECT id, execucao_id, data_referencia, dia_semana, horario, tita, aplicador, tipo, conflito
                 FROM sessoes_direcionamento
                 WHERE execucao_id = %s
                 ORDER BY horario, aplicador;

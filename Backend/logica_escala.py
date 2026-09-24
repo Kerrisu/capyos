@@ -577,7 +577,14 @@ def ler_referencia_e_piscina(url_planilha, nome_aba):
                     continue
 
                 nome_limpo = " ".join(valor.upper().split())
-                chave_unica = (nome_limpo, texto_coluna_a)
+                aplicador_atual = mapa_coluna_profissional.get(j)
+                # Chave inclui o aplicador de propósito: se a mesma tita aparecer
+                # no mesmo horário com DOIS aplicadores diferentes, isso é um erro
+                # de preenchimento na planilha (confirmado com o Ken em 24/09/2026),
+                # mas queremos registrar as duas mesmo assim e sinalizar o conflito,
+                # em vez de descartar uma delas silenciosamente como o
+                # processar_escala faz (lá faz sentido, pois só interessa 1 sala).
+                chave_unica = (nome_limpo, texto_coluna_a, aplicador_atual)
 
                 if chave_unica in registrados:
                     continue
@@ -595,11 +602,24 @@ def ler_referencia_e_piscina(url_planilha, nome_aba):
                         "tita": nome_limpo,
                         "horario": texto_coluna_a + "H",
                         "tipo": "REFERENCIA" if is_verde else "PISCINA",
-                        "aplicador": mapa_coluna_profissional.get(j)
+                        "aplicador": aplicador_atual,
+                        "conflito": False,  # recalculado abaixo
                     })
                     registrados.add(chave_unica)
 
             linha_anterior_values = values
+
+        # Marca como conflito qualquer (tita, horário) que apareceu mais de uma
+        # vez com aplicadores diferentes — sinal de erro de preenchimento na
+        # planilha. Quem for consolidar o registro no Cadastro em Massa decide
+        # manualmente quem foi a referência de verdade.
+        contagem_por_tita_horario = {}
+        for s in sessoes_encontradas:
+            chave = (s["tita"], s["horario"])
+            contagem_por_tita_horario[chave] = contagem_por_tita_horario.get(chave, 0) + 1
+        for s in sessoes_encontradas:
+            if contagem_por_tita_horario[(s["tita"], s["horario"])] > 1:
+                s["conflito"] = True
 
         print(f"{DEBUG_TAG} ler_referencia_e_piscina() concluída. {len(sessoes_encontradas)} sessões encontradas.")
         return sessoes_encontradas
