@@ -38,6 +38,9 @@ class ConfiguracoesGerais(BaseModel):
     permite_divisao_geral: bool = True
     salas_bloqueadas: list[str] = []
     url_planilha: str = ""
+
+class HorarioRegistroDirecionamentoRequest(BaseModel):
+    horario: str  # formato "HH:MM", ex: "14:00"
     ordem_salas_mezanino: list[str] = []
     ordem_salas_terreo: list[str] = []
     ordem_salas_preferencial: list[str] = []

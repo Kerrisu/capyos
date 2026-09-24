@@ -305,6 +305,10 @@ COR_AMARELO = (1.0, 1.0, 0.4)    # SUPRIDA
 # a expectativa é que vire verde puro nos próximos dias, mas tratamos como
 # equivalente desde já pra não perder esses assistidos na alocação.
 COR_REFERENCIA_TRANSFERIDO = (1.0, 0.78, 0.808)
+# Azul claro da PISCINA. Calibrado com o Ken em 23/09/2026 via /debug/cores
+# contra a aba QUARTA real (3 células confirmadas: Arthur Emanuel 15:30H,
+# Mateus Guerra 15:30H, Maria Eduarda 16:15H).
+COR_PISCINA = (0.639, 0.859, 1.0)
 TOLERANCIA_COR = 0.05
 
 
@@ -503,6 +507,105 @@ def processar_escala(url_planilha, callback_progresso, nome_aba):
 
     except Exception as e:
         print(f"{DEBUG_TAG} ERRO em processar_escala(): {e}")
+        return f"Erro no processamento: {str(e)}"
+
+
+# --- REGISTRO DE REFERÊNCIA/PISCINA (módulo à parte do Cadastro em Massa) ---
+
+def ler_referencia_e_piscina(url_planilha, nome_aba):
+    """
+    Lê o Direcionamento real (mesma leitura de rows_data/cores que
+    processar_escala usa) e devolve só as sessões de REFERÊNCIA e PISCINA,
+    com tita/horário/aplicador — ignorando SUPRIDA de propósito, porque o
+    foco aqui é registrar quem precisou de tita, não quem foi suprido.
+    Mesmo shape de retorno que processar_escala: lista de dicts em caso de
+    sucesso, ou uma string com a mensagem de erro em caso de falha.
+    """
+    try:
+        print(f"{DEBUG_TAG} ler_referencia_e_piscina() iniciada. nome_aba={nome_aba}")
+
+        rows_data, titulo_aba_usada = _obter_rows_data(url_planilha, nome_aba)
+        print(f"{DEBUG_TAG} Aba usada: '{titulo_aba_usada}'. {len(rows_data)} linhas baixadas da planilha.")
+
+        sessoes_encontradas = []
+        registrados = set()
+        horarios_limpos = [_normalizar_horario(h) for h in HORARIOS_PADRAO]
+
+        mapa_coluna_profissional = {}
+        linha_anterior_values = None
+
+        for row in rows_data:
+            values = row.get('values', [])
+            if not values:
+                linha_anterior_values = values
+                continue
+
+            texto_coluna_a_bruto = values[0].get('formattedValue', '').strip()
+            texto_normalizado = _normalizar(texto_coluna_a_bruto)
+
+            if texto_normalizado == "HORARIO":
+                novo_mapa = {}
+                if linha_anterior_values:
+                    for j, cell in enumerate(linha_anterior_values):
+                        if j == 0:
+                            continue
+                        nome_prof = cell.get('formattedValue', '').strip()
+                        nome_prof = _remover_sufixo_parenteses(nome_prof)
+                        if nome_prof:
+                            novo_mapa[j] = nome_prof
+                if novo_mapa:
+                    mapa_coluna_profissional = novo_mapa
+                linha_anterior_values = values
+                continue
+
+            texto_coluna_a = _normalizar_horario(texto_coluna_a_bruto)
+
+            if texto_coluna_a not in horarios_limpos:
+                linha_anterior_values = values
+                continue
+
+            for j, cell in enumerate(values):
+                if j == 0:
+                    continue
+
+                valor = cell.get('formattedValue', '').strip()
+                if not valor:
+                    continue
+
+                valor = _remover_sufixo_parenteses(valor)
+                if not valor:
+                    continue
+
+                nome_limpo = " ".join(valor.upper().split())
+                chave_unica = (nome_limpo, texto_coluna_a)
+
+                if chave_unica in registrados:
+                    continue
+
+                cor_data = cell.get('effectiveFormat', {}).get('backgroundColor', {})
+                r = cor_data.get('red', 0)
+                g = cor_data.get('green', 0)
+                b = cor_data.get('blue', 0)
+
+                is_verde = _cor_bate(r, g, b, COR_VERDE) or _cor_bate(r, g, b, COR_REFERENCIA_TRANSFERIDO)
+                is_piscina = _cor_bate(r, g, b, COR_PISCINA)
+
+                if is_verde or is_piscina:
+                    sessoes_encontradas.append({
+                        "tita": nome_limpo,
+                        "horario": texto_coluna_a + "H",
+                        "tipo": "REFERENCIA" if is_verde else "PISCINA",
+                        "aplicador": mapa_coluna_profissional.get(j)
+                    })
+                    registrados.add(chave_unica)
+
+            linha_anterior_values = values
+
+        print(f"{DEBUG_TAG} ler_referencia_e_piscina() concluída. {len(sessoes_encontradas)} sessões encontradas.")
+        return sessoes_encontradas
+
+    except Exception as e:
+        print(f"{DEBUG_TAG} ERRO em ler_referencia_e_piscina(): {e}")
         return f"Erro no processamento: {str(e)}"
 
 

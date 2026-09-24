@@ -132,6 +132,36 @@ def criar_tabelas():
                 );
             """)
 
+            # ====================================================
+            # 3. REGISTRO AUTOMÁTICO DE REFERÊNCIA/PISCINA (à parte do
+            #    Cadastro em Massa, só coordenação)
+            # ====================================================
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS execucoes_direcionamento (
+                    id SERIAL PRIMARY KEY,
+                    data_hora_execucao TIMESTAMP NOT NULL DEFAULT NOW(),
+                    data_referencia DATE NOT NULL,
+                    dia_semana VARCHAR(20),
+                    aba_usada VARCHAR(100),
+                    tipo_execucao VARCHAR(20) NOT NULL, -- 'MANUAL' ou 'AUTOMATICA'
+                    status VARCHAR(20) NOT NULL,         -- 'SUCESSO', 'ERRO' ou 'SEM_ABA_HOJE'
+                    mensagem_erro TEXT,
+                    total_sessoes INTEGER NOT NULL DEFAULT 0
+                );
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS sessoes_direcionamento (
+                    id SERIAL PRIMARY KEY,
+                    execucao_id INTEGER NOT NULL REFERENCES execucoes_direcionamento(id) ON DELETE CASCADE,
+                    data_referencia DATE NOT NULL,
+                    dia_semana VARCHAR(20),
+                    horario VARCHAR(10),
+                    tita VARCHAR(255),
+                    aplicador VARCHAR(255),
+                    tipo VARCHAR(20) NOT NULL -- 'REFERENCIA' ou 'PISCINA'
+                );
+            """)
+
             # --- Migração pra bancos que já existiam antes dessas colunas
             cur.execute("""
                 ALTER TABLE configuracoes_gerais
@@ -142,7 +172,8 @@ def criar_tabelas():
                     ADD COLUMN IF NOT EXISTS url_vacancia TEXT
                         NOT NULL DEFAULT '',
                     ADD COLUMN IF NOT EXISTS aplicadores_formados JSONB
-                        NOT NULL DEFAULT '{}'::jsonb;
+                        NOT NULL DEFAULT '{}'::jsonb,
+                    ADD COLUMN IF NOT EXISTS horario_registro_direcionamento VARCHAR(5);
             """)
         conn.commit()
         print(f"{DEBUG_TAG} Tabelas OK.")
@@ -514,6 +545,163 @@ def remover_relatos_aba_em_lote(ids: list[int]) -> int:
 class LoginJaExisteError(Exception):
     """Levantado quando se tenta criar um usuário com um login que já existe."""
     pass
+
+
+# --- REGISTRO DE REFERÊNCIA/PISCINA ---
+
+def obter_horario_registro_direcionamento():
+    """Devolve o horário agendado (string 'HH:MM') ou None se nunca foi configurado."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT horario_registro_direcionamento FROM configuracoes_gerais WHERE id = 1;")
+            linha = cur.fetchone()
+        return linha[0] if linha else None
+    finally:
+        conn.close()
+
+
+def salvar_horario_registro_direcionamento(horario: str):
+    """
+    Atualiza só o horário agendado, sem mexer no resto de configuracoes_gerais.
+    Se a linha (id=1) ainda não existir, cria uma com os defaults do resto.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO configuracoes_gerais (id, todas_as_salas, horario_registro_direcionamento)
+                VALUES (1, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    horario_registro_direcionamento = EXCLUDED.horario_registro_direcionamento;
+            """, (TODAS_AS_SALAS_DEFAULT, horario))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def criar_execucao_direcionamento(data_referencia, dia_semana, aba_usada, tipo_execucao,
+                                   status, mensagem_erro, total_sessoes) -> dict:
+    """Registra uma rodada (manual ou automática) no log de execuções."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                INSERT INTO execucoes_direcionamento
+                    (data_referencia, dia_semana, aba_usada, tipo_execucao, status, mensagem_erro, total_sessoes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, data_hora_execucao, data_referencia, dia_semana, aba_usada,
+                          tipo_execucao, status, mensagem_erro, total_sessoes;
+            """, (data_referencia, dia_semana, aba_usada, tipo_execucao, status, mensagem_erro, total_sessoes))
+            linha = dict(cur.fetchone())
+        conn.commit()
+        linha["data_hora_execucao"] = linha["data_hora_execucao"].isoformat()
+        linha["data_referencia"] = linha["data_referencia"].isoformat()
+        return linha
+    finally:
+        conn.close()
+
+
+def inserir_sessoes_direcionamento(execucao_id: int, data_referencia, dia_semana: str, sessoes: list[dict]) -> int:
+    """Insere as sessões (referência/piscina) encontradas numa execução. Retorna quantas foram inseridas."""
+    if not sessoes:
+        return 0
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.executemany("""
+                INSERT INTO sessoes_direcionamento
+                    (execucao_id, data_referencia, dia_semana, horario, tita, aplicador, tipo)
+                VALUES (%(execucao_id)s, %(data_referencia)s, %(dia_semana)s, %(horario)s,
+                        %(tita)s, %(aplicador)s, %(tipo)s);
+            """, [
+                {
+                    "execucao_id": execucao_id,
+                    "data_referencia": data_referencia,
+                    "dia_semana": dia_semana,
+                    "horario": s.get("horario"),
+                    "tita": s.get("tita"),
+                    "aplicador": s.get("aplicador"),
+                    "tipo": s.get("tipo"),
+                }
+                for s in sessoes
+            ])
+        conn.commit()
+        return len(sessoes)
+    finally:
+        conn.close()
+
+
+def ja_rodou_automatico_hoje(data_referencia) -> bool:
+    """Confere se já rodou uma execução AUTOMÁTICA com sucesso hoje, pra não disparar 2x."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 1 FROM execucoes_direcionamento
+                WHERE tipo_execucao = 'AUTOMATICA'
+                  AND status = 'SUCESSO'
+                  AND data_referencia = %s
+                LIMIT 1;
+            """, (data_referencia,))
+            return cur.fetchone() is not None
+    finally:
+        conn.close()
+
+
+def listar_execucoes_direcionamento(dia_semana: str = None, limite: int = 30) -> list[dict]:
+    """Lista as execuções (mais recentes primeiro), com filtro opcional por dia_semana (aba)."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            condicoes = []
+            parametros = []
+            if dia_semana:
+                condicoes.append("dia_semana = %s")
+                parametros.append(dia_semana)
+            where = f"WHERE {' AND '.join(condicoes)}" if condicoes else ""
+            parametros.append(limite)
+            cur.execute(f"""
+                SELECT id, data_hora_execucao, data_referencia, dia_semana, aba_usada,
+                       tipo_execucao, status, mensagem_erro, total_sessoes
+                FROM execucoes_direcionamento
+                {where}
+                ORDER BY data_hora_execucao DESC
+                LIMIT %s;
+            """, parametros)
+            linhas = cur.fetchall()
+        resultado = []
+        for linha in linhas:
+            item = dict(linha)
+            item["data_hora_execucao"] = item["data_hora_execucao"].isoformat()
+            item["data_referencia"] = item["data_referencia"].isoformat()
+            resultado.append(item)
+        return resultado
+    finally:
+        conn.close()
+
+
+def listar_sessoes_direcionamento(execucao_id: int) -> list[dict]:
+    """Lista as sessões (referência/piscina) de UMA execução específica."""
+    conn = get_connection()
+    try:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                SELECT id, execucao_id, data_referencia, dia_semana, horario, tita, aplicador, tipo
+                FROM sessoes_direcionamento
+                WHERE execucao_id = %s
+                ORDER BY horario, aplicador;
+            """, (execucao_id,))
+            linhas = cur.fetchall()
+        resultado = []
+        for linha in linhas:
+            item = dict(linha)
+            item["data_referencia"] = item["data_referencia"].isoformat()
+            resultado.append(item)
+        return resultado
+    finally:
+        conn.close()
 
 
 def criar_usuario_db(nome: str, login: str, senha_hash: str, papel: str) -> dict:

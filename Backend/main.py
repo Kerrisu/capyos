@@ -12,11 +12,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 import os
 import logica_escala
 import database
-from models import GerarEscalaRequest, GerarEscalaResponse, PacienteUpsertRequest, ConfiguracoesGerais
+from models import (
+    GerarEscalaRequest, GerarEscalaResponse, PacienteUpsertRequest, ConfiguracoesGerais,
+    HorarioRegistroDirecionamentoRequest,
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends
 from passlib.context import CryptContext
@@ -32,6 +36,16 @@ from models import (
 # Configurações de Segurança e JWT
 SECRET_KEY = os.environ.get("JWT_SECRET", "capyos_super_secreta_2026") # Mude no Render depois
 ALGORITHM = "HS256"
+
+# Chave simples pra proteger a rota de "tick" do agendamento (que precisa
+# ficar sem login, já que quem bate nela é um serviço de cron externo, não
+# um usuário logado no VISOR). Mude no Render junto com o JWT_SECRET.
+DIRECIONAMENTO_TICK_SECRET = os.environ.get("DIRECIONAMENTO_TICK_SECRET", "troque_essa_chave_no_render")
+
+# O Render roda em UTC por padrão. Todo horário configurado pela coordenação
+# (e toda comparação de "que horas são agora" pro agendamento) é em horário
+# de Recife — por isso convertemos explicitamente em vez de usar datetime.now() cru.
+FUSO_RECIFE = ZoneInfo("America/Recife")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
@@ -587,6 +601,24 @@ DIAS_SEMANA_PT = [
     "Quinta-feira", "Sexta-feira", "Sábado", "Domingo",
 ]
 
+# Nome EXATO das abas do Direcionamento real por dia da semana (confirmado
+# com o Ken em 23/09/2026 via print — repare que só QUINTA tem "-FEIRA" no
+# nome, os outros dias não). Sábado e domingo não têm aba.
+NOME_ABA_DIRECIONAMENTO_POR_DIA_SEMANA = {
+    0: "SEGUNDA",
+    1: "TERÇA",
+    2: "QUARTA",
+    3: "QUINTA-FEIRA",
+    4: "SEXTA",
+}
+
+
+def _nome_aba_direcionamento_hoje():
+    """Devolve o nome da aba do Direcionamento pro dia de hoje (horário de Recife),
+    ou None se hoje for sábado/domingo (não tem aba)."""
+    hoje = datetime.now(FUSO_RECIFE).date()
+    return NOME_ABA_DIRECIONAMENTO_POR_DIA_SEMANA.get(hoje.weekday()), hoje
+
 
 def _parse_linha_bulk(linha_bruta: str, aplicadores_validos: set):
     """
@@ -801,6 +833,151 @@ def remover_relatos_aba_em_lote_rota(request: RemocaoLoteRequest, usuario: dict 
     print(f"{DEBUG_TAG} Remoção em lote de relatos-aba: {removidos} (por {usuario.get('nome')})")
 
     return RemocaoLoteResponse(removidos=removidos)
+
+
+# ==========================================
+# REGISTRO DE REFERÊNCIA/PISCINA (à parte do Cadastro em Massa, só coordenação)
+# ==========================================
+
+def _executar_leitura_direcionamento(tipo_execucao: str) -> dict:
+    """
+    Núcleo compartilhado pelo botão "Forçar" (MANUAL) e pelo tick do
+    agendamento (AUTOMATICA). Lê o Direcionamento real de hoje, classifica
+    REFERÊNCIA/PISCINA e salva tudo (execução + sessões) no banco.
+    """
+    nome_aba, hoje = _nome_aba_direcionamento_hoje()
+    dia_semana_pt = DIAS_SEMANA_PT[hoje.weekday()]
+
+    if not nome_aba:
+        print(f"{DEBUG_TAG} _executar_leitura_direcionamento: hoje ({dia_semana_pt}) não tem aba no Direcionamento.")
+        execucao = database.criar_execucao_direcionamento(
+            data_referencia=hoje, dia_semana=dia_semana_pt, aba_usada=None,
+            tipo_execucao=tipo_execucao, status="SEM_ABA_HOJE",
+            mensagem_erro=None, total_sessoes=0,
+        )
+        return {"execucao": execucao, "sessoes": []}
+
+    try:
+        config = database.carregar_config_completo()
+    except database.ErroBancoDados as e:
+        execucao = database.criar_execucao_direcionamento(
+            data_referencia=hoje, dia_semana=nome_aba, aba_usada=nome_aba,
+            tipo_execucao=tipo_execucao, status="ERRO",
+            mensagem_erro=str(e), total_sessoes=0,
+        )
+        return {"execucao": execucao, "sessoes": []}
+
+    url_planilha = config.get("configuracoes_gerais", {}).get("url_planilha")
+    if not url_planilha:
+        execucao = database.criar_execucao_direcionamento(
+            data_referencia=hoje, dia_semana=nome_aba, aba_usada=nome_aba,
+            tipo_execucao=tipo_execucao, status="ERRO",
+            mensagem_erro="Nenhuma url_planilha configurada em Configurações.",
+            total_sessoes=0,
+        )
+        return {"execucao": execucao, "sessoes": []}
+
+    resultado = logica_escala.ler_referencia_e_piscina(url_planilha, nome_aba)
+
+    if isinstance(resultado, str):
+        execucao = database.criar_execucao_direcionamento(
+            data_referencia=hoje, dia_semana=nome_aba, aba_usada=nome_aba,
+            tipo_execucao=tipo_execucao, status="ERRO",
+            mensagem_erro=resultado, total_sessoes=0,
+        )
+        return {"execucao": execucao, "sessoes": []}
+
+    execucao = database.criar_execucao_direcionamento(
+        data_referencia=hoje, dia_semana=nome_aba, aba_usada=nome_aba,
+        tipo_execucao=tipo_execucao, status="SUCESSO",
+        mensagem_erro=None, total_sessoes=len(resultado),
+    )
+    database.inserir_sessoes_direcionamento(execucao["id"], hoje, nome_aba, resultado)
+
+    print(f"{DEBUG_TAG} _executar_leitura_direcionamento: {len(resultado)} sessões salvas (execucao_id={execucao['id']}, tipo={tipo_execucao}).")
+    return {"execucao": execucao, "sessoes": resultado}
+
+
+@app.post("/direcionamento/executar")
+def direcionamento_executar(usuario: dict = Depends(obter_usuario_logado)):
+    """Roda a leitura do Direcionamento AGORA (botão 'Forçar'). Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode forçar o registro.")
+
+    resultado = _executar_leitura_direcionamento("MANUAL")
+    return resultado
+
+
+@app.get("/direcionamento/tick")
+def direcionamento_tick(chave: str):
+    """
+    Rota sem login, batida por um serviço de cron externo a cada poucos
+    minutos. Só dispara a leitura de verdade se: (1) a chave bate, (2) tem
+    um horário configurado, (3) o horário de Recife agora já passou do
+    horário configurado, e (4) ainda não rodou automático com sucesso hoje.
+    """
+    if chave != DIRECIONAMENTO_TICK_SECRET:
+        raise HTTPException(status_code=403, detail="Chave inválida.")
+
+    horario_configurado = database.obter_horario_registro_direcionamento()
+    if not horario_configurado:
+        return {"executado": False, "motivo": "Nenhum horário configurado ainda."}
+
+    agora_recife = datetime.now(FUSO_RECIFE)
+    hoje = agora_recife.date()
+
+    if agora_recife.strftime("%H:%M") < horario_configurado:
+        return {"executado": False, "motivo": f"Ainda não bateu {horario_configurado} (agora são {agora_recife.strftime('%H:%M')})."}
+
+    if database.ja_rodou_automatico_hoje(hoje):
+        return {"executado": False, "motivo": "Já rodou automático com sucesso hoje."}
+
+    resultado = _executar_leitura_direcionamento("AUTOMATICA")
+    return {"executado": True, **resultado}
+
+
+@app.get("/direcionamento/config")
+def direcionamento_obter_config(usuario: dict = Depends(obter_usuario_logado)):
+    """Devolve o horário agendado atual. Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode ver essa configuração.")
+
+    return {"horario_registro_direcionamento": database.obter_horario_registro_direcionamento()}
+
+
+@app.patch("/direcionamento/config")
+def direcionamento_salvar_config(request: HorarioRegistroDirecionamentoRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """Edita o horário em que a leitura roda sozinha. Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode editar essa configuração.")
+
+    horario = request.horario.strip()
+    try:
+        datetime.strptime(horario, "%H:%M")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Horário inválido — use o formato HH:MM (ex: 14:00).")
+
+    database.salvar_horario_registro_direcionamento(horario)
+    print(f"{DEBUG_TAG} Horário de registro do Direcionamento atualizado para {horario} (por {usuario.get('nome')}).")
+    return {"horario_registro_direcionamento": horario}
+
+
+@app.get("/direcionamento/execucoes")
+def direcionamento_listar_execucoes(dia_semana: str = None, limite: int = 30, usuario: dict = Depends(obter_usuario_logado)):
+    """Lista o histórico de execuções (log), com filtro opcional por aba/dia. Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode ver esse histórico.")
+
+    return {"execucoes": database.listar_execucoes_direcionamento(dia_semana=dia_semana, limite=limite)}
+
+
+@app.get("/direcionamento/sessoes")
+def direcionamento_listar_sessoes(execucao_id: int, usuario: dict = Depends(obter_usuario_logado)):
+    """Lista as sessões (referência/piscina) de uma execução específica. Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode ver esses resultados.")
+
+    return {"sessoes": database.listar_sessoes_direcionamento(execucao_id)}
 
 
 # ==========================================
