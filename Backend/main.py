@@ -980,6 +980,18 @@ def direcionamento_listar_sessoes(execucao_id: int, usuario: dict = Depends(obte
     return {"sessoes": database.listar_sessoes_direcionamento(execucao_id)}
 
 
+@app.get("/debug/testar-direcionamento")
+def debug_testar_direcionamento():
+    """
+    Rota TEMPORÁRIA sem login, só pra validar o módulo de registro de
+    referência/piscina abrindo direto no navegador (mesmo espírito do
+    /debug/cores). Roda exatamente o mesmo código do botão "Forçar" real.
+    Remover depois que a tela de coordenação estiver pronta e testada.
+    """
+    resultado = _executar_leitura_direcionamento("MANUAL")
+    return resultado
+
+
 # ==========================================
 # ROTA TEMPORÁRIA: INJETAR TITAS DE TESTE
 # ==========================================
