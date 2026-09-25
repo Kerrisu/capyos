@@ -711,18 +711,6 @@ export default function AppAplicadores() {
     'gerar-escala': 'home',
   };
 
-  // Renderiza uma lista de botões empilhados, um por linha, ocupando a
-  // largura toda
-  const renderBotoesEmPares = (botoes) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-      {botoes.map((b) => (
-        <MinecraftButton key={b.label} onClick={b.onClick} style={{ width: '100%', marginBottom: 0 }}>
-          {b.label}
-        </MinecraftButton>
-      ))}
-    </div>
-  );
-
   const irPara = (novaTela) => {
     setTela(novaTela);
     setMenuAberto(false);
@@ -778,7 +766,15 @@ export default function AppAplicadores() {
       ];
 
   return (
-    <div style={{ width: '100%', maxWidth: '600px', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', boxSizing: 'border-box' }}>
+    <>
+      {/* ========================================== */}
+      {/* BARRA SUPERIOR FIXA — azul, com o ☰ na esquerda (estilo TiTa) */}
+      {/* ========================================== */}
+      <div className="visor-topbar">
+        <button className="visor-topbar-hamburger" onClick={() => setMenuAberto(true)} aria-label="Abrir menu de navegação">
+          ☰
+        </button>
+      </div>
 
       {/* ========================================== */}
       {/* MENU LATERAL (drawer) — toda a navegação vive aqui agora */}
@@ -790,64 +786,75 @@ export default function AppAplicadores() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="mc-panel"
-            style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '80%', maxWidth: '320px', overflowY: 'auto', margin: 0, borderRadius: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}
+            className="visor-drawer"
+            style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '80%', maxWidth: '320px', overflowY: 'auto' }}
           >
-            <div>
-              <h2 style={{ margin: 0, fontSize: 14 }}>{usuarioNome}</h2>
-              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#F0F8FF' }}>
+            <div style={{ marginBottom: '8px' }}>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{usuarioNome}</h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', opacity: 0.85 }}>
                 {isCoordenacao ? 'Coordenação' : 'Aplicador'}
               </p>
             </div>
+            <hr className="visor-drawer-divider" />
 
-            <MinecraftButton onClick={() => irPara('home')} style={{ width: '100%' }}>
+            <button className="visor-drawer-item" onClick={() => irPara('home')}>
               🏠 Início
-            </MinecraftButton>
+            </button>
+            <hr className="visor-drawer-divider" />
 
             {isCoordenacao ? (
               <>
                 {menuSecoesCoordenacao.map((secao) => (
-                  <div key={secao.chave}>
-                    <MinecraftButton
+                  <div key={secao.chave} style={{ width: '100%' }}>
+                    <button
+                      className="visor-drawer-section-title"
                       onClick={() => setMenuSecoesAbertas((prev) => ({ ...prev, [secao.chave]: !prev[secao.chave] }))}
-                      style={{ width: '100%', textAlign: 'left' }}
                     >
-                      {secao.titulo} {menuSecoesAbertas[secao.chave] ? '▲' : '▼'}
-                    </MinecraftButton>
+                      {secao.titulo}
+                      <span>{menuSecoesAbertas[secao.chave] ? '▲' : '▼'}</span>
+                    </button>
                     {menuSecoesAbertas[secao.chave] && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', paddingLeft: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: '14px' }}>
                         {secao.itens.map((item) => (
-                          <MinecraftButton key={item.label} onClick={item.onClick} style={{ width: '100%', fontSize: '10px' }}>
+                          <button key={item.label} className="visor-drawer-item" onClick={item.onClick}>
                             {item.label}
-                          </MinecraftButton>
+                          </button>
                         ))}
                       </div>
                     )}
                   </div>
                 ))}
-                {renderBotoesEmPares(menuItensSoltosCoordenacao)}
+                <hr className="visor-drawer-divider" />
+                {menuItensSoltosCoordenacao.map((item) => (
+                  <button key={item.label} className="visor-drawer-item" onClick={item.onClick}>
+                    {item.label}
+                  </button>
+                ))}
               </>
             ) : (
-              renderBotoesEmPares(menuItensAplicador)
+              menuItensAplicador.map((item) => (
+                <button key={item.label} className="visor-drawer-item" onClick={item.onClick}>
+                  {item.label}
+                </button>
+              ))
             )}
 
-            <div style={{ marginTop: 'auto' }}>
-              {renderBotoesEmPares([{ label: 'Sair', onClick: handleLogout }])}
-            </div>
+            <hr className="visor-drawer-divider" style={{ marginTop: 'auto' }} />
+            <p style={{ margin: '0 0 4px 6px', fontSize: '13px', fontWeight: 700, opacity: 0.85 }}>Acesso</p>
+            <button className="visor-drawer-item" onClick={handleLogout}>
+              🚪 Sair
+            </button>
           </div>
         </div>
       )}
 
-      <div style={{ width: '100%', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-        <div style={{ textAlign: 'left' }}>
-          <h2 className="mc-title" style={{ fontSize: 16, margin: 0, lineHeight: '1.3' }}>Olá, {usuarioNome}</h2>
-          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>
-            {isCoordenacao ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
-          </p>
-        </div>
-        <MinecraftButton onClick={() => setMenuAberto(true)} style={{ fontSize: '14px', padding: '10px 14px' }}>
-          ☰
-        </MinecraftButton>
+      <div style={{ width: '100%', maxWidth: '600px', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', paddingTop: 'calc(56px + env(safe-area-inset-top, 0px) + 20px)', boxSizing: 'border-box' }}>
+
+      <div style={{ width: '100%', marginBottom: '24px', textAlign: 'left' }}>
+        <h2 className="mc-title" style={{ fontSize: 16, margin: 0, lineHeight: '1.3' }}>Olá, {usuarioNome}</h2>
+        <p style={{ color: 'var(--visor-texto-suave)', fontSize: '12px', margin: '4px 0 0 0' }}>
+          {isCoordenacao ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
+        </p>
       </div>
 
       {/* ========================================== */}
@@ -1320,5 +1327,6 @@ export default function AppAplicadores() {
       </div>
       )}
     </div>
+    </>
   );
 }
