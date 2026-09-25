@@ -26,7 +26,11 @@ export default function AppAplicadores() {
   const [acordandoServidor, setAcordandoServidor] = useState(true);
 
   // ITEM 5/6/7: navegação em estilo menu (igual o CapyOS de alocação de salas)
-  const [tela, setTela] = useState('home'); // home | titas | relatar-aba | cadastro-massa | relatos-aba | gerenciar-usuarios | gerar-escala | salas-pacientes | salas-configuracoes
+  const [tela, setTela] = useState('home'); // home (dashboard) | titas | relatar-aba | cadastro-massa | relatos-aba | gerenciar-usuarios | gerar-escala | salas-pacientes | salas-configuracoes
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [menuSecoesAbertas, setMenuSecoesAbertas] = useState({ pendencias: true, configuracoes: false });
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [carregandoDashboard, setCarregandoDashboard] = useState(false);
 
   // PONTO 3: controle de dropdown aberto/fechado por aplicador (aberto por padrão)
   const [gruposAbertos, setGruposAbertos] = useState({});
@@ -143,6 +147,27 @@ export default function AppAplicadores() {
       setPendencias(data);
     } catch (err) {
       console.error("Erro ao buscar pendências:", err);
+    }
+  };
+
+  const carregarDashboard = async () => {
+    setCarregandoDashboard(true);
+    try {
+      const response = await fetch(`${API_URL}/dashboard`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.status === 401) {
+        handleLogout();
+        return;
+      }
+
+      const data = await response.json();
+      setDashboardStats(data.estatisticas);
+    } catch (err) {
+      console.error("Erro ao buscar dashboard:", err);
+    } finally {
+      setCarregandoDashboard(false);
     }
   };
 
@@ -540,6 +565,12 @@ export default function AppAplicadores() {
   }, [token, isCoordenacao]);
 
   useEffect(() => {
+    if (token && tela === 'home') {
+      carregarDashboard();
+    }
+  }, [token, tela]);
+
+  useEffect(() => {
     if (token && isCoordenacao && tela === 'relatos-aba') {
       carregarRelatos();
     }
@@ -667,19 +698,16 @@ export default function AppAplicadores() {
     );
   }
 
-  // Mapa de "pra onde volta" — cada tela sabe qual é sua tela-mãe. Pro
-  // aplicador, Lista de Titas e Relatar Sessão sem ABA ficam direto na tela
-  // principal (não tem submenu de Pendências), então voltam pra 'home'.
+  // Mapa de "pra onde volta" — agora que a navegação principal é o menu
+  // lateral, toda tela-folha volta direto pra 'home' (o dashboard).
   const TELA_PAI = {
-    'pendencias-menu': 'home',
-    'configuracoes-menu': 'home',
-    'titas': isCoordenacao ? 'pendencias-menu' : 'home',
-    'relatar-aba': isCoordenacao ? 'pendencias-menu' : 'home',
-    'cadastro-massa': 'pendencias-menu',
-    'relatos-aba': 'pendencias-menu',
-    'gerenciar-usuarios': 'configuracoes-menu',
-    'salas-pacientes': 'configuracoes-menu',
-    'salas-configuracoes': 'configuracoes-menu',
+    'titas': 'home',
+    'relatar-aba': 'home',
+    'cadastro-massa': 'home',
+    'relatos-aba': 'home',
+    'gerenciar-usuarios': 'home',
+    'salas-pacientes': 'home',
+    'salas-configuracoes': 'home',
     'gerar-escala': 'home',
   };
 
@@ -695,84 +723,156 @@ export default function AppAplicadores() {
     </div>
   );
 
-  // Pro aplicador, Lista de Titas e Relatar Sessão sem ABA ficam direto na
-  // tela principal — não fazia sentido esconder atrás de "Pendências" quando
-  // são as duas únicas coisas que ele tem acesso
-  const botoesMenuPrincipal = isCoordenacao
-    ? [
-        { label: 'Pendências', onClick: () => setTela('pendencias-menu') },
-        { label: 'Gerar Escala', onClick: () => setTela('gerar-escala') },
-        { label: 'Configurações', onClick: () => setTela('configuracoes-menu') },
-      ]
-    : [
-        { label: 'Lista de Titas', onClick: () => setTela('titas') },
-        { label: 'Relatar Sessão sem ABA', onClick: () => setTela('relatar-aba') },
-      ];
+  const irPara = (novaTela) => {
+    setTela(novaTela);
+    setMenuAberto(false);
+  };
 
-  const botoesPendencias = [
-    { label: 'Lista de Titas', onClick: () => setTela('titas') },
-    { label: 'Relatar Sessão sem ABA', onClick: () => setTela('relatar-aba') },
-    { label: 'Cadastro em Massa', onClick: () => setTela('cadastro-massa') },
-    { label: 'Relatório de ABA no TiTa', onClick: () => setTela('relatos-aba') },
-    { label: '← Voltar', onClick: () => setTela('home') },
+  // Estrutura do menu lateral. Pro aplicador é só uma lista solta (poucos
+  // itens); pra coordenação vira 2 seções que expandem/recolhem (Pendências
+  // e Configurações), igual ao padrão que o Ken trouxe de referência.
+  const menuSecoesCoordenacao = [
+    {
+      chave: 'pendencias',
+      titulo: 'Pendências',
+      itens: [
+        { label: 'Lista de Titas', onClick: () => irPara('titas') },
+        { label: 'Relatar Sessão sem ABA', onClick: () => irPara('relatar-aba') },
+        { label: 'Cadastro em Massa', onClick: () => irPara('cadastro-massa') },
+        { label: 'Relatório de ABA no TiTa', onClick: () => irPara('relatos-aba') },
+      ],
+    },
+    {
+      chave: 'configuracoes',
+      titulo: 'Configurações',
+      itens: [
+        { label: 'Gerenciar Aplicadores', onClick: () => irPara('gerenciar-usuarios') },
+        { label: 'Gerenciar Assistidos', onClick: () => irPara('salas-pacientes') },
+        { label: 'Configurações Gerais', onClick: () => irPara('salas-configuracoes') },
+      ],
+    },
   ];
 
-  const botoesConfiguracoes = [
-    { label: 'Gerenciar Aplicadores', onClick: () => setTela('gerenciar-usuarios') },
-    { label: 'Gerenciar Assistidos', onClick: () => setTela('salas-pacientes') },
-    { label: 'Configurações Gerais', onClick: () => setTela('salas-configuracoes') },
-    { label: '← Voltar', onClick: () => setTela('home') },
+  const menuItensSoltosCoordenacao = [
+    { label: 'Gerar Escala', onClick: () => irPara('gerar-escala') },
   ];
+
+  const menuItensAplicador = [
+    { label: 'Lista de Titas', onClick: () => irPara('titas') },
+    { label: 'Relatar Sessão sem ABA', onClick: () => irPara('relatar-aba') },
+  ];
+
 
   // ==========================================
   // TELA PRINCIPAL DE PENDÊNCIAS
   // ==========================================
+  const cardsDashboard = isCoordenacao
+    ? [
+        { label: 'Titas pendentes registrados', valor: dashboardStats?.pendentes },
+        { label: 'Titas marcados como concluídos', valor: dashboardStats?.concluidos },
+        { label: 'Ajustes de sessões de aba no TiTa', valor: dashboardStats?.ajustes_aba },
+      ]
+    : [
+        { label: 'Suas pendências em aberto', valor: dashboardStats?.pendentes },
+        { label: 'Concluídas por você', valor: dashboardStats?.concluidos },
+      ];
+
   return (
     <div style={{ width: '100%', maxWidth: '600px', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', boxSizing: 'border-box' }}>
-      <div style={{ width: '100%', marginBottom: '24px', textAlign: 'left' }}>
-        <h2 className="mc-title" style={{ fontSize: 16, margin: 0, lineHeight: '1.3' }}>Olá, {usuarioNome}</h2>
-        <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>
-          {isCoordenacao ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
-        </p>
-      </div>
 
       {/* ========================================== */}
-      {/* TELA DE MENU (home) — sem painel/retângulo, botões soltos, estilo Minecraft */}
+      {/* MENU LATERAL (drawer) — toda a navegação vive aqui agora */}
       {/* ========================================== */}
-      {tela === 'home' && (
-        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ width: '100%' }}>
-            {renderBotoesEmPares(botoesMenuPrincipal)}
-            <div style={{ marginTop: '32px' }}>
+      {menuAberto && (
+        <div
+          onClick={() => setMenuAberto(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="mc-panel"
+            style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '80%', maxWidth: '320px', overflowY: 'auto', margin: 0, borderRadius: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}
+          >
+            <div>
+              <h2 style={{ margin: 0, fontSize: 14 }}>{usuarioNome}</h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#F0F8FF' }}>
+                {isCoordenacao ? 'Coordenação' : 'Aplicador'}
+              </p>
+            </div>
+
+            <MinecraftButton onClick={() => irPara('home')} style={{ width: '100%' }}>
+              🏠 Início
+            </MinecraftButton>
+
+            {isCoordenacao ? (
+              <>
+                {menuSecoesCoordenacao.map((secao) => (
+                  <div key={secao.chave}>
+                    <MinecraftButton
+                      onClick={() => setMenuSecoesAbertas((prev) => ({ ...prev, [secao.chave]: !prev[secao.chave] }))}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      {secao.titulo} {menuSecoesAbertas[secao.chave] ? '▲' : '▼'}
+                    </MinecraftButton>
+                    {menuSecoesAbertas[secao.chave] && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', paddingLeft: '12px' }}>
+                        {secao.itens.map((item) => (
+                          <MinecraftButton key={item.label} onClick={item.onClick} style={{ width: '100%', fontSize: '10px' }}>
+                            {item.label}
+                          </MinecraftButton>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {renderBotoesEmPares(menuItensSoltosCoordenacao)}
+              </>
+            ) : (
+              renderBotoesEmPares(menuItensAplicador)
+            )}
+
+            <div style={{ marginTop: 'auto' }}>
               {renderBotoesEmPares([{ label: 'Sair', onClick: handleLogout }])}
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================== */}
-      {/* SUBMENU: PENDÊNCIAS — só coordenação (aplicador já tem os botões na home) */}
-      {/* ========================================== */}
-      {isCoordenacao && tela === 'pendencias-menu' && (
-        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ width: '100%' }}>{renderBotoesEmPares(botoesPendencias)}</div>
+      <div style={{ width: '100%', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ textAlign: 'left' }}>
+          <h2 className="mc-title" style={{ fontSize: 16, margin: 0, lineHeight: '1.3' }}>Olá, {usuarioNome}</h2>
+          <p style={{ color: '#F0F8FF', textShadow: '2px 2px 0 rgba(0,0,0,0.35)', fontSize: '12px', margin: '4px 0 0 0' }}>
+            {isCoordenacao ? 'Visão Geral (Coordenação)' : 'Suas pendências'}
+          </p>
         </div>
-      )}
+        <MinecraftButton onClick={() => setMenuAberto(true)} style={{ fontSize: '14px', padding: '10px 14px' }}>
+          ☰
+        </MinecraftButton>
+      </div>
 
       {/* ========================================== */}
-      {/* SUBMENU: CONFIGURAÇÕES (Gerenciar Aplicadores/Assistidos, Configurações Gerais) */}
+      {/* DASHBOARD (home) — números de resumo, a navegação agora é só o menu lateral */}
       {/* ========================================== */}
-      {isCoordenacao && tela === 'configuracoes-menu' && (
-        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ width: '100%' }}>{renderBotoesEmPares(botoesConfiguracoes)}</div>
+      {tela === 'home' && (
+        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {carregandoDashboard && !dashboardStats && (
+            <p style={{ color: '#F0F8FF', fontSize: '12px', textAlign: 'center' }}>Carregando...</p>
+          )}
+          {cardsDashboard.map((card) => (
+            <MinecraftPanel key={card.label}>
+              <p style={{ margin: 0, fontSize: '11px', color: '#F0F8FF' }}>{card.label}</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '28px', fontWeight: 'bold' }}>
+                {card.valor ?? '—'}
+              </p>
+            </MinecraftPanel>
+          ))}
         </div>
       )}
 
       {/* Botão de voltar das telas finais (Lista de Titas, Cadastro em Massa,
-          etc.) — os dois submenus (Pendências/Configurações) já trazem o
-          próprio "← Voltar" junto dos outros botões, e as telas de Salas
-          também têm o próprio botão embutido, então ficam de fora daqui */}
-      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes', 'pendencias-menu', 'configuracoes-menu'].includes(tela) && (
+          etc.) — as telas de Salas já têm o próprio botão embutido, então
+          ficam de fora daqui */}
+      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes'].includes(tela) && (
         <MinecraftButton onClick={() => setTela(TELA_PAI[tela] || 'home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
           ← Voltar
         </MinecraftButton>
