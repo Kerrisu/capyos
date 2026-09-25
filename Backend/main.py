@@ -233,6 +233,17 @@ def inspecionar_cores_planilha(url: str, nome_aba: str):
     return {"total_amostras": len(amostras), "resumo": resumo, "amostras": amostras}
 
 
+@app.get("/dashboard")
+def dashboard(usuario: dict = Depends(obter_usuario_logado)):
+    """
+    Números da tela inicial (dashboard). Coordenação vê pendentes/concluídos/
+    ajustes de aba (total geral); aplicador vê só os seus (pendentes/concluídos).
+    """
+    papel = usuario.get("papel")
+    estatisticas = database.obter_estatisticas_dashboard(usuario.get("nome"), papel)
+    return {"papel": papel, "estatisticas": estatisticas}
+
+
 @app.post("/gerar-escala", response_model=GerarEscalaResponse)
 def gerar_escala(request: GerarEscalaRequest, usuario: dict = Depends(obter_usuario_logado)):
     """

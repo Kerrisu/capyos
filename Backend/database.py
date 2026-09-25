@@ -362,6 +362,34 @@ def buscar_usuario_por_login(login: str):
         conn.close()
 
 
+def obter_estatisticas_dashboard(nome_usuario: str, papel: str) -> dict:
+    """
+    Números do dashboard inicial. Coordenação vê o total geral (pendências,
+    concluídas e ajustes de sessão de aba no TiTa); aplicador vê só a
+    pendência/conclusão atrelada ao próprio nome. Sempre total histórico
+    (sem filtro de data).
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if papel == "coordenacao":
+                cur.execute("SELECT COUNT(*) FROM pendencias WHERE feito = false;")
+                pendentes = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM pendencias WHERE feito = true;")
+                concluidos = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM relatos_aba;")
+                ajustes_aba = cur.fetchone()[0]
+                return {"pendentes": pendentes, "concluidos": concluidos, "ajustes_aba": ajustes_aba}
+            else:
+                cur.execute("SELECT COUNT(*) FROM pendencias WHERE aplicador = %s AND feito = false;", (nome_usuario,))
+                pendentes = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM pendencias WHERE aplicador = %s AND feito = true;", (nome_usuario,))
+                concluidos = cur.fetchone()[0]
+                return {"pendentes": pendentes, "concluidos": concluidos}
+    finally:
+        conn.close()
+
+
 def listar_pendencias_db(nome_usuario: str, papel: str):
     """
     Retorna as pendências do banco.
