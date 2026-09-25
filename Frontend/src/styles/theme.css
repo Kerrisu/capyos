@@ -53,18 +53,10 @@ body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   color: var(--visor-texto);
-  /* Fundo liso, claro — sem textura, sem imagem: mantém o olho descansado
-     no uso prolongado do dia a dia (é uma ferramenta clínica, não uma
-     página de divulgação). */
-  background-color: var(--visor-fundo);
-  /* Fundo original restaurado a pedido do Ken: a arte pixel art com o
-     overlay azul a 75% de opacidade por cima (mesmo ajuste de antes do
-     rebrand VISOR) — só 25% da imagem aparece, sem lavar pra branco/preto. */
-  background-image: linear-gradient(rgba(126, 192, 238, 0.75), rgba(126, 192, 238, 0.75)), url('../assets/bg_capyos.png');
-  background-size: cover;
-  background-position: top center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  /* Fundo branco liso — a pedido do Ken pra bater com a referência visual
+     do TiTa Therapy (barra azul no topo, conteúdo branco embaixo). Substitui
+     o fundo com a arte pixel art usado antes do reskin. */
+  background-color: #FFFFFF;
   min-height: 100vh;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -310,4 +302,90 @@ body {
   .tela-loading .capybara {
     width: 70px;
   }
+}
+
+/* ================================================== */
+/* BARRA SUPERIOR + MENU LATERAL — estilo TiTa Therapy */
+/* Barra azul fixa no topo com o ☰ na esquerda; menu lateral com fundo azul
+   e texto branco, itens sem "cara de botão" (sem borda/fundo próprio),
+   só o texto em destaque — a pedido do Ken em 24/09/2026 pra bater com as
+   referências visuais do TiTa Therapy. */
+/* ================================================== */
+.visor-topbar {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--visor-navy);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  z-index: 60;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.visor-topbar-hamburger {
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 10px 12px;
+}
+.visor-drawer {
+  background: var(--visor-navy);
+  color: #FFFFFF;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.visor-drawer h2,
+.visor-drawer p {
+  color: #FFFFFF;
+}
+.visor-drawer-item {
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: left;
+  padding: 12px 6px;
+  cursor: pointer;
+  width: 100%;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.visor-drawer-item:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.visor-drawer-section-title {
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  text-align: left;
+  padding: 12px 6px;
+  cursor: pointer;
+  width: 100%;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.visor-drawer-section-title:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.visor-drawer-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  margin: 10px 0;
+  width: 100%;
 }
