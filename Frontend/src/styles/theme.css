@@ -81,7 +81,7 @@ body {
 .mc-panel {
   background: var(--visor-superficie);
   border: 2px solid var(--visor-navy);
-  border-radius: 6px;
+  border-radius: 20px;
   padding: 20px;
   box-shadow: 3px 3px 0 rgba(5, 55, 98, 0.12);
 }
@@ -563,4 +563,62 @@ body {
   color: #FFFFFF;
   font-size: 22px;
   font-weight: 800;
+}
+
+/* ================================================== */
+/* FORMULÁRIOS (Relatar Sessão sem ABA, Cadastro em Massa, filtros do
+   Relatório de ABA no TiTa, etc.) — inputs, selects e textareas com bordas
+   arredondadas, no lugar dos cantos retos de antes (pedido do Ken em
+   26/09/2026). */
+/* ================================================== */
+.visor-input {
+  padding: 12px 14px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  border: 2px solid var(--visor-navy);
+  border-radius: 14px;
+  background-color: #FFFFFF;
+  color: var(--visor-texto);
+  outline: none;
+  box-shadow: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.visor-dropdown-list {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--visor-navy);
+  background-color: #FFFFFF;
+}
+.visor-checkbox-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--visor-navy);
+  background-color: #FFFFFF;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  color: var(--visor-texto);
+}
+.visor-checkbox-chip--marcado {
+  background: linear-gradient(135deg, #2EC4B6, #3BB273);
+  color: #FFFFFF;
+  border-color: transparent;
+}
+
+/* Cards do Relatório de ABA no TiTa — mesmos gradientes da home (pedido do
+   Ken em 26/09/2026): "sem ABA" reaproveita o gradiente amarelo/laranja dos
+   Ajustes, "perdeu sessão" reaproveita o vermelho/laranja dos Pendentes. */
+.visor-relato-card {
+  border-radius: 18px;
+  padding: 12px 16px;
+}
+.visor-relato-card--sem-aba {
+  background: linear-gradient(135deg, #FBC80D, #FF8C42);
+}
+.visor-relato-card--perdeu-sessao {
+  background: linear-gradient(135deg, #F2131A, #FF8C42);
 }
