@@ -24,10 +24,11 @@ const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
   fontSize: 16,
-  padding: 8,
+  padding: 10,
   marginBottom: 14,
   fontFamily: "Arial, Helvetica, sans-serif",
-  border: "2px solid #373737",
+  border: "2px solid var(--visor-navy)",
+  borderRadius: 14,
 };
 
 const labelStyle = {
@@ -281,8 +282,9 @@ export default function TelaConfiguracoes({ onVoltar }) {
                     alignItems: "center",
                     fontSize: 14,
                     fontFamily: "Arial, Helvetica, sans-serif",
-                    padding: "3px 6px",
-                    border: "2px solid #373737",
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    border: "2px solid var(--visor-navy)",
                     background: "#F0F8FF",
                     color: "#2B2B2B",
                   }}
@@ -396,8 +398,9 @@ export default function TelaConfiguracoes({ onVoltar }) {
                   style={{
                     fontFamily: "Arial, Helvetica, sans-serif",
                     fontSize: 14,
-                    padding: "2px 8px",
-                    border: "2px solid #373737",
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                    border: "2px solid var(--visor-navy)",
                     background: "#FFD4D4",
                     color: "#2B2B2B",
                     cursor: "pointer",

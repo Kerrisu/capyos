@@ -1088,7 +1088,7 @@ export default function AppAplicadores() {
                 {pendenciasParaAprovacao.map((p) => (
                   <label
                     key={p.id}
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#a8e6cf', border: '2px solid #3b7d4f', cursor: 'pointer', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', color: '#000' }}
+                    className="visor-select-item"
                   >
                     <input
                       type="checkbox"
@@ -1096,7 +1096,7 @@ export default function AppAplicadores() {
                       onChange={() => toggleSelecaoRemocao(p.id)}
                       style={{ width: '16px', height: '16px', flexShrink: 0 }}
                     />
-                    <span>{p.tita} <span style={{ color: '#333' }}>({p.aplicador} · {formatarDataPorExtenso(p.data)})</span></span>
+                    <span>{p.tita} <span style={{ opacity: 0.85 }}>({p.aplicador} · {formatarDataPorExtenso(p.data)})</span></span>
                   </label>
                 ))}
               </div>
@@ -1218,10 +1218,10 @@ export default function AppAplicadores() {
                 {/* Formulário de criação */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: 'Arial, Helvetica, sans-serif' }}>Novo aplicador/coordenação</p>
-                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} />
-                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} />
-                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} />
-                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
+                  <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} className="visor-input" />
+                  <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} className="visor-input" />
+                  <input type="password" placeholder="Senha inicial" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} className="visor-input" />
+                  <select value={novoPapel} onChange={(e) => setNovoPapel(e.target.value)} className="visor-input">
                     <option value="aplicador">Aplicador</option>
                     <option value="coordenacao">Coordenação</option>
                   </select>
@@ -1232,15 +1232,15 @@ export default function AppAplicadores() {
                 </div>
 
                 {/* Lista de usuários existentes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #555', paddingTop: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #E2E6EA', paddingTop: '14px' }}>
                   {usuarios.map((u) => (
                     <div
                       key={u.login}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', backgroundColor: '#C6C6C6', border: '2px solid', borderColor: '#fff #555 #555 #fff', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px' }}
+                      className="visor-list-item"
                     >
                       <div>
-                        <div style={{ color: '#000' }}>{u.nome} {u.login === loginAtual && '(você)'}</div>
-                        <div style={{ color: '#555', fontSize: '9px', marginTop: '4px' }}>{u.login} · {u.papel}</div>
+                        <div style={{ color: '#1E1E1E', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px' }}>{u.nome} {u.login === loginAtual && '(você)'}</div>
+                        <div style={{ color: '#555', fontSize: '11px', marginTop: '4px', fontFamily: 'Arial, Helvetica, sans-serif' }}>{u.login} · {u.papel}</div>
                       </div>
                       <MinecraftButton
                         onClick={() => handleRemoverUsuario(u.login)}

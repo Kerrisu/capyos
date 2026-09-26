@@ -21,10 +21,11 @@ const inputStyle = {
   width: "100%",
   boxSizing: "border-box",
   fontSize: 16,
-  padding: 8,
+  padding: 10,
   marginBottom: 14,
   fontFamily: "Arial, Helvetica, sans-serif",
-  border: "2px solid #373737",
+  border: "2px solid var(--visor-navy)",
+  borderRadius: 14,
 };
 
 const selectStyle = { ...inputStyle };
@@ -221,8 +222,9 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
                     style={{
                       fontFamily: "Arial, Helvetica, sans-serif",
                       fontSize: 14,
-                      padding: "3px 8px",
-                      border: "2px solid #373737",
+                      padding: "6px 12px",
+                      border: "2px solid var(--visor-navy)",
+                      borderRadius: 999,
                       background: "#F0F8FF",
                       color: "#2B2B2B",
                       cursor: "pointer",

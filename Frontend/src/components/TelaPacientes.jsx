@@ -13,10 +13,11 @@ function Badge({ ativo, label }) {
         display: "inline-block",
         fontSize: 13,
         fontFamily: "Arial, Helvetica, sans-serif",
-        padding: "2px 6px",
+        padding: "3px 10px",
         marginRight: 6,
         marginBottom: 4,
-        border: "2px solid #373737",
+        borderRadius: 999,
+        border: "2px solid var(--visor-navy)",
         background: ativo ? "#D4FFD4" : "#F0F0F0",
         color: "#2B2B2B",
       }}
@@ -150,11 +151,12 @@ export default function TelaPacientes({ onVoltar }) {
                 width: "100%",
                 boxSizing: "border-box",
                 fontSize: 16,
-                padding: 8,
+                padding: 10,
                 marginTop: 10,
                 marginBottom: 10,
                 fontFamily: "Arial, Helvetica, sans-serif",
-                border: "2px solid #373737",
+                border: "2px solid var(--visor-navy)",
+                borderRadius: 14,
               }}
             />
 
@@ -167,7 +169,8 @@ export default function TelaPacientes({ onVoltar }) {
                 maxHeight: 340,
                 overflowY: "auto",
                 marginBottom: 14,
-                border: "2px solid #373737",
+                border: "2px solid var(--visor-navy)",
+                borderRadius: 16,
                 background: "#FFFFFF",
               }}
             >
@@ -205,8 +208,9 @@ export default function TelaPacientes({ onVoltar }) {
                         style={{
                           fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: 14,
-                          padding: "3px 10px",
-                          border: "2px solid #373737",
+                          padding: "5px 12px",
+                          border: "2px solid var(--visor-navy)",
+                          borderRadius: 999,
                           background: "#F0F8FF",
                           color: "#2B2B2B",
                           cursor: "pointer",
@@ -222,8 +226,9 @@ export default function TelaPacientes({ onVoltar }) {
                         style={{
                           fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: 14,
-                          padding: "3px 10px",
-                          border: "2px solid #373737",
+                          padding: "5px 12px",
+                          border: "2px solid var(--visor-navy)",
+                          borderRadius: 999,
                           background: "#FFD4D4",
                           color: "#2B2B2B",
                           cursor: "pointer",
@@ -238,8 +243,9 @@ export default function TelaPacientes({ onVoltar }) {
                     <div
                       style={{
                         background: "#FFF3CD",
-                        border: "2px solid #8B0000",
-                        padding: 8,
+                        border: "2px solid var(--visor-vermelho)",
+                        borderRadius: 14,
+                        padding: 10,
                         marginBottom: 6,
                         fontSize: 14,
                         color: "#2B2B2B",
@@ -258,9 +264,10 @@ export default function TelaPacientes({ onVoltar }) {
                           style={{
                             fontFamily: "Arial, Helvetica, sans-serif",
                             fontSize: 14,
-                            padding: "3px 10px",
-                            border: "2px solid #373737",
-                            background: "#8B0000",
+                            padding: "5px 12px",
+                            border: "2px solid var(--visor-vermelho)",
+                            borderRadius: 999,
+                            background: "var(--visor-vermelho)",
                             color: "#FFFFFF",
                             cursor: "pointer",
                           }}
@@ -273,8 +280,9 @@ export default function TelaPacientes({ onVoltar }) {
                           style={{
                             fontFamily: "Arial, Helvetica, sans-serif",
                             fontSize: 14,
-                            padding: "3px 10px",
-                            border: "2px solid #373737",
+                            padding: "5px 12px",
+                            border: "2px solid var(--visor-navy)",
+                            borderRadius: 999,
                             background: "#F0F0F0",
                             color: "#2B2B2B",
                             cursor: "pointer",
