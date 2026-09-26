@@ -208,11 +208,11 @@ export default function TelaPacientes({ onVoltar }) {
                         style={{
                           fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: 14,
-                          padding: "5px 12px",
-                          border: "2px solid var(--visor-navy)",
+                          padding: "6px 14px",
+                          border: "none",
                           borderRadius: 999,
-                          background: "#F0F8FF",
-                          color: "#2B2B2B",
+                          background: "var(--visor-navy)",
+                          color: "#FFFFFF",
                           cursor: "pointer",
                         }}
                       >
@@ -226,11 +226,11 @@ export default function TelaPacientes({ onVoltar }) {
                         style={{
                           fontFamily: "Arial, Helvetica, sans-serif",
                           fontSize: 14,
-                          padding: "5px 12px",
-                          border: "2px solid var(--visor-navy)",
+                          padding: "6px 14px",
+                          border: "none",
                           borderRadius: 999,
-                          background: "#FFD4D4",
-                          color: "#2B2B2B",
+                          background: "var(--visor-vermelho)",
+                          color: "#FFFFFF",
                           cursor: "pointer",
                         }}
                       >
@@ -264,8 +264,8 @@ export default function TelaPacientes({ onVoltar }) {
                           style={{
                             fontFamily: "Arial, Helvetica, sans-serif",
                             fontSize: 14,
-                            padding: "5px 12px",
-                            border: "2px solid var(--visor-vermelho)",
+                            padding: "6px 14px",
+                            border: "none",
                             borderRadius: 999,
                             background: "var(--visor-vermelho)",
                             color: "#FFFFFF",
@@ -280,11 +280,11 @@ export default function TelaPacientes({ onVoltar }) {
                           style={{
                             fontFamily: "Arial, Helvetica, sans-serif",
                             fontSize: 14,
-                            padding: "5px 12px",
-                            border: "2px solid var(--visor-navy)",
+                            padding: "6px 14px",
+                            border: "none",
                             borderRadius: 999,
-                            background: "#F0F0F0",
-                            color: "#2B2B2B",
+                            background: "var(--visor-texto-suave)",
+                            color: "#FFFFFF",
                             cursor: "pointer",
                           }}
                         >

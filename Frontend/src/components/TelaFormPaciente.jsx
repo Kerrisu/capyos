@@ -223,10 +223,10 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
                       fontFamily: "Arial, Helvetica, sans-serif",
                       fontSize: 14,
                       padding: "6px 12px",
-                      border: "2px solid var(--visor-navy)",
+                      border: "none",
                       borderRadius: 999,
-                      background: "#F0F8FF",
-                      color: "#2B2B2B",
+                      background: "var(--visor-navy)",
+                      color: "#FFFFFF",
                       cursor: "pointer",
                       marginBottom: 14,
                     }}

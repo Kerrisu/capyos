@@ -1263,92 +1263,87 @@ export default function AppAplicadores() {
       {tela === 'titas' && (
       <div style={{ width: '100%' }}>
         <h2 className="mc-title" style={{ fontSize: '22px', margin: '0 0 16px 0' }}>Lista de TITAS</h2>
-        {pendencias.length === 0 ? (
-          <MinecraftPanel>
+
+        {/* GRUPO 2: busca + abrir/fechar todos — só coordenação (aplicador só tem um grupo, não faz sentido) */}
+        {isCoordenacao && pendencias.length > 0 && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="Buscar Aplicador"
+              value={buscaAplicador}
+              onChange={(e) => setBuscaAplicador(e.target.value)}
+              className="visor-tita-search"
+            />
+            <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
+              {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
+            </MinecraftButton>
+          </div>
+        )}
+
+        <MinecraftPanel>
+          {pendencias.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '12px', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1.6' }}>
               Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉
             </p>
-          </MinecraftPanel>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          ) : aplicadoresFiltrados.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+              Nenhum aplicador encontrado
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* RENDERIZAÇÃO CATEGORIZADA POR APLICADOR — um bloco cinza por aplicador, dentro do painel branco */}
+              {aplicadoresFiltrados.map((aplicador) => {
+                const listaOrdenada = ordenarPendenciasDoAplicador(pendenciasAgrupadas[aplicador]);
+                const totalPendentes = listaOrdenada.filter(p => !p.feito).length;
+                const aberto = grupoEstaAberto(aplicador);
 
-            {/* GRUPO 2: busca + abrir/fechar todos — só coordenação (aplicador só tem um grupo, não faz sentido) */}
-            {isCoordenacao && (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  placeholder="Buscar Aplicador"
-                  value={buscaAplicador}
-                  onChange={(e) => setBuscaAplicador(e.target.value)}
-                  className="visor-tita-search"
-                />
-                <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                  {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
-                </MinecraftButton>
-              </div>
-            )}
-
-            {aplicadoresFiltrados.length === 0 && (
-              <MinecraftPanel>
-                <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                  Nenhum aplicador encontrado
-                </p>
-              </MinecraftPanel>
-            )}
-
-            {/* RENDERIZAÇÃO CATEGORIZADA POR APLICADOR — um painel branco por aplicador */}
-            {aplicadoresFiltrados.map((aplicador) => {
-              const listaOrdenada = ordenarPendenciasDoAplicador(pendenciasAgrupadas[aplicador]);
-              const totalPendentes = listaOrdenada.filter(p => !p.feito).length;
-              const aberto = grupoEstaAberto(aplicador);
-
-              return (
-                <MinecraftPanel key={aplicador}>
-                  {/* Título da Categoria (clicável = dropdown) + contador alinhado à direita */}
-                  <div
-                    onClick={() => toggleGrupo(aplicador)}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', margin: '0 0 10px 0', borderBottom: '2px solid #ddd', paddingBottom: '10px' }}
-                  >
-                    <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: 0 }}>
-                      {aplicador} {aberto ? '▼' : '▶'}
-                    </h3>
-                    <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px', color: '#1E1E1E' }}>
-                      {totalPendentes} Pendências
-                    </span>
-                  </div>
-
-                  {/* Cards do Aplicador */}
-                  {aberto && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {listaOrdenada.map((p) => (
-                        <div
-                          key={p.id}
-                          onClick={() => toggleFeito(p.id, p.feito)}
-                          className={`visor-tita-card ${p.feito ? 'visor-tita-card--feito' : 'visor-tita-card--pendente'}`}
-                        >
-                          <div className="visor-tita-card-info">
-                            <div className="visor-tita-card-data">{formatarDataPorExtenso(p.data)} ({p.dia_semana}) - {p.horario}</div>
-                            <div className="visor-tita-card-nome">{p.tita}</div>
-                            {!p.feito && (
-                              <div className="visor-tita-card-dias">
-                                {textoDiasPendente(p.dias_pendente).replace(/^p/, 'P')}.
-                              </div>
-                            )}
-                            {p.observacao && <div className="visor-tita-card-obs">Obs: {p.observacao}</div>}
-                          </div>
-                          <div className={`visor-tita-circle ${p.feito ? 'visor-tita-circle--feito' : 'visor-tita-circle--pendente'}`}>
-                            {p.feito ? '✓' : ''}
-                          </div>
-                        </div>
-                      ))}
+                return (
+                  <div key={aplicador} className="visor-tita-group">
+                    {/* Título da Categoria (clicável = dropdown) + contador alinhado à direita */}
+                    <div
+                      onClick={() => toggleGrupo(aplicador)}
+                      className="visor-tita-group-header"
+                    >
+                      <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: 0 }}>
+                        {aplicador} {aberto ? '▼' : '▶'}
+                      </h3>
+                      <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px', color: '#1E1E1E' }}>
+                        {totalPendentes} Pendências
+                      </span>
                     </div>
-                  )}
-                </MinecraftPanel>
-              );
-            })}
 
-          </div>
-        )}
+                    {/* Cards do Aplicador */}
+                    {aberto && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
+                        {listaOrdenada.map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={() => toggleFeito(p.id, p.feito)}
+                            className={`visor-tita-card ${p.feito ? 'visor-tita-card--feito' : 'visor-tita-card--pendente'}`}
+                          >
+                            <div className="visor-tita-card-info">
+                              <div className="visor-tita-card-data">{formatarDataPorExtenso(p.data)} ({p.dia_semana}) - {p.horario}</div>
+                              <div className="visor-tita-card-nome">{p.tita}</div>
+                              {!p.feito && (
+                                <div className="visor-tita-card-dias">
+                                  {textoDiasPendente(p.dias_pendente).replace(/^p/, 'P')}.
+                                </div>
+                              )}
+                              {p.observacao && <div className="visor-tita-card-obs">Obs: {p.observacao}</div>}
+                            </div>
+                            <div className={`visor-tita-circle ${p.feito ? 'visor-tita-circle--feito' : 'visor-tita-circle--pendente'}`}>
+                              {p.feito ? '✓' : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </MinecraftPanel>
       </div>
       )}
     </div>

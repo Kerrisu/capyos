@@ -83,13 +83,15 @@ function NomeArrastavel({ id, nome, dragData, disabled, destaque }) {
 
   const style = {
     display: "inline-block",
-    padding: "4px 9px",
+    padding: "6px 12px",
     margin: "3px 4px 3px 0",
-    background: destaque ? "#4a3a00" : "#3a3a3a",
-    border: `2px solid ${destaque ? "#FFD700" : "#666"}`,
-    color: destaque ? "#FFD700" : "#f0f0f0",
+    background: destaque ? "var(--visor-amarelo)" : "var(--visor-navy)",
+    border: "none",
+    borderRadius: 999,
+    color: destaque ? "var(--visor-navy-escuro)" : "#FFFFFF",
     fontFamily: "Arial, Helvetica, sans-serif",
-    fontSize: 16,
+    fontWeight: 700,
+    fontSize: 15,
     cursor: disabled ? "default" : isDragging ? "grabbing" : "grab",
     opacity: disabled ? 0.35 : isDragging ? 0.5 : 1,
     touchAction: "none",
@@ -97,6 +99,7 @@ function NomeArrastavel({ id, nome, dragData, disabled, destaque }) {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 999 : "auto",
     position: isDragging ? "relative" : "static",
+    boxShadow: isDragging ? "2px 4px 10px rgba(5, 55, 98, 0.35)" : "none",
   };
 
   return (
@@ -123,29 +126,32 @@ function SalaSlot({ sala, horario, ocupantes, onClickSala }) {
   const qtd = nomes.length;
   const vaiEstourar = isOver && qtd >= 2;
 
-  const corContagem = qtd === 0 ? "#888" : qtd <= 2 ? "#4CAF50" : "#FFA500";
+  const corContagem = qtd === 0 ? "var(--visor-texto-suave)" : qtd <= 2 ? "var(--visor-verde)" : "var(--visor-amarelo-escuro)";
 
   return (
     <div
       ref={setNodeRef}
       className="sala-slot"
       style={{
-        background: isOver ? (vaiEstourar ? "#3a2f1f" : "#1f3a1f") : "#2b2b2b",
-        border: `2px solid ${isOver ? (vaiEstourar ? "#FFA500" : "#4CAF50") : "#555"}`,
-        padding: "6px 8px",
+        background: isOver ? (vaiEstourar ? "#FFF3D0" : "#DFF3E3") : "#F4F6F8",
+        border: `2px solid ${isOver ? (vaiEstourar ? "var(--visor-amarelo-escuro)" : "var(--visor-verde)") : "#D7DCE2"}`,
+        borderRadius: 14,
+        padding: "8px 10px",
         marginBottom: 8,
         transition: "border-color 0.1s, background 0.1s",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ color: "#e8e8e8", fontFamily: "Arial, Helvetica, sans-serif", fontSize: 17 }}>{sala}</span>
+        <span style={{ color: "var(--visor-texto)", fontFamily: "Arial, Helvetica, sans-serif", fontWeight: 700, fontSize: 17 }}>{sala}</span>
         <span
           style={{
             fontFamily: "Arial, Helvetica, sans-serif",
+            fontWeight: 700,
             fontSize: 13,
-            padding: "1px 6px",
-            border: `1px solid ${corContagem}`,
-            color: corContagem,
+            padding: "2px 8px",
+            borderRadius: 999,
+            color: "#FFFFFF",
+            background: corContagem,
           }}
         >
           {qtd}/2{qtd > 2 ? "+" : ""}
@@ -154,7 +160,7 @@ function SalaSlot({ sala, horario, ocupantes, onClickSala }) {
 
       <div style={{ minHeight: 30, marginBottom: 6 }}>
         {nomes.length === 0 && (
-          <span style={{ color: "#666", fontFamily: "Arial, Helvetica, sans-serif", fontSize: 14, fontStyle: "italic" }}>
+          <span style={{ color: "var(--visor-texto-suave)", fontFamily: "Arial, Helvetica, sans-serif", fontSize: 14, fontStyle: "italic" }}>
             (vazia)
           </span>
         )}
@@ -393,7 +399,7 @@ export default function TelaGerarEscala({ onVoltar }) {
 
         {estado === "erro" && (
           <>
-            <p style={{ fontSize: 16, color: "#8B0000", textAlign: "center", marginBottom: 12 }}>
+            <p style={{ fontSize: 16, color: "var(--visor-vermelho)", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
             <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
@@ -416,13 +422,8 @@ export default function TelaGerarEscala({ onVoltar }) {
               value={abaSelecionada}
               onChange={(e) => setAbaSelecionada(e.target.value)}
               disabled={estado === "gerando"}
-              style={{
-                width: "100%",
-                fontSize: 16,
-                padding: 8,
-                marginBottom: 14,
-                fontFamily: "Arial, Helvetica, sans-serif",
-              }}
+              className="visor-input"
+              style={{ marginBottom: 14 }}
             >
               {abas.map((aba) => (
                 <option key={aba} value={aba}>
@@ -450,33 +451,24 @@ export default function TelaGerarEscala({ onVoltar }) {
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div
                 style={{
-                  background: "#2b2b2b",
-                  padding: 10,
+                  background: "#F4F6F8",
+                  padding: 12,
                   marginBottom: 10,
-                  border: "2px solid #373737",
+                  border: "2px solid #D7DCE2",
+                  borderRadius: 14,
                 }}
               >
-                <p style={{ fontSize: 12, color: "#aaaaaa", textAlign: "center", marginBottom: 8 }}>
+                <p style={{ fontSize: 12, color: "var(--visor-texto-suave)", textAlign: "center", marginBottom: 8 }}>
                   PRÓXIMOS DA FILA (arraste os do horário atual pra uma sala):
                 </p>
                 {gruposFila.map((grupo) => {
                   const doHorarioAtual = grupo.horario === horarioAtual;
                   return (
-                    <div key={grupo.horario} style={{ marginBottom: 10 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          background: "#2E7D32",
-                          color: "#fff",
-                          fontFamily: "Arial, Helvetica, sans-serif",
-                          fontSize: 16,
-                          padding: "2px 8px",
-                          marginRight: 8,
-                        }}
-                      >
+                    <div key={grupo.horario} className="fila-grupo">
+                      <span className="fila-horario-badge">
                         {grupo.horario}
                       </span>
-                      <span style={{ color: "#aaa", fontFamily: "Arial, Helvetica, sans-serif", fontSize: 14 }}>
+                      <span className="fila-contagem">
                         {grupo.itens.length} {grupo.itens.length === 1 ? "assistido" : "assistidos"}
                       </span>
                       <div style={{ marginTop: 4 }}>
@@ -505,9 +497,10 @@ export default function TelaGerarEscala({ onVoltar }) {
                   maxHeight: 320,
                   overflowY: "auto",
                   marginBottom: 10,
-                  border: "2px solid #373737",
-                  padding: 6,
-                  background: "#1f1f1f",
+                  border: "2px solid #D7DCE2",
+                  borderRadius: 14,
+                  padding: 8,
+                  background: "#FAFBFC",
                 }}
               >
                 {ordenarSalas(mapaAtual).map((sala) => (
@@ -547,8 +540,9 @@ export default function TelaGerarEscala({ onVoltar }) {
               <div
                 style={{
                   background: "#FFD4D4",
-                  border: "2px solid #8B0000",
-                  padding: 8,
+                  border: "2px solid var(--visor-vermelho)",
+                  borderRadius: 14,
+                  padding: 10,
                   marginBottom: 12,
                   fontSize: 15,
                   color: "#2B2B2B",
@@ -564,14 +558,15 @@ export default function TelaGerarEscala({ onVoltar }) {
               style={{
                 background: "#FFFFFF",
                 color: "#2B2B2B",
-                padding: 10,
+                padding: 12,
                 maxHeight: 260,
                 overflowY: "auto",
                 fontSize: 15,
                 fontFamily: "Arial, Helvetica, sans-serif",
                 whiteSpace: "pre-wrap",
                 marginBottom: 14,
-                border: "2px solid #373737",
+                border: "2px solid var(--visor-navy)",
+                borderRadius: 14,
               }}
             >
               {textoFinal}
@@ -589,7 +584,7 @@ export default function TelaGerarEscala({ onVoltar }) {
             </MinecraftButton>
 
             {statusEscrita === "erro" && (
-              <p style={{ fontSize: 14, color: "#8B0000", textAlign: "center", margin: "4px 0 10px" }}>
+              <p style={{ fontSize: 14, color: "var(--visor-vermelho)", textAlign: "center", margin: "4px 0 10px" }}>
                 🔴 {erroEscrita}
               </p>
             )}

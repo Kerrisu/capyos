@@ -398,11 +398,11 @@ export default function TelaConfiguracoes({ onVoltar }) {
                   style={{
                     fontFamily: "Arial, Helvetica, sans-serif",
                     fontSize: 14,
-                    padding: "4px 12px",
+                    padding: "5px 14px",
                     borderRadius: 999,
-                    border: "2px solid var(--visor-navy)",
-                    background: "#FFD4D4",
-                    color: "#2B2B2B",
+                    border: "none",
+                    background: "var(--visor-vermelho)",
+                    color: "#FFFFFF",
                     cursor: "pointer",
                   }}
                 >
