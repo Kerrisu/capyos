@@ -1257,90 +1257,93 @@ export default function AppAplicadores() {
       {/* ========================================== */}
       {tela === 'titas' && (
       <div style={{ width: '100%' }}>
-        <MinecraftPanel title="Lista de Titas">
-          {pendencias.length === 0 ? (
+        <h2 className="mc-title" style={{ fontSize: '22px', margin: '0 0 16px 0' }}>Lista de TITAS</h2>
+        {pendencias.length === 0 ? (
+          <MinecraftPanel>
             <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '12px', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1.6' }}>
               Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉
             </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
+          </MinecraftPanel>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-              {/* GRUPO 2: busca + abrir/fechar todos — só coordenação (aplicador só tem um grupo, não faz sentido) */}
-              {isCoordenacao && (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    placeholder="Buscar aplicador..."
-                    value={buscaAplicador}
-                    onChange={(e) => setBuscaAplicador(e.target.value)}
-                    style={{ flex: 1, minWidth: '140px', padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }}
-                  />
-                  <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                    {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
-                  </MinecraftButton>
-                </div>
-              )}
+            {/* GRUPO 2: busca + abrir/fechar todos — só coordenação (aplicador só tem um grupo, não faz sentido) */}
+            {isCoordenacao && (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar Aplicador"
+                  value={buscaAplicador}
+                  onChange={(e) => setBuscaAplicador(e.target.value)}
+                  className="visor-tita-search"
+                />
+                <MinecraftButton onClick={toggleTodosGrupos} style={{ fontSize: '9px', padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                  {algumGrupoFechado ? 'Abrir todos' : 'Fechar todos'}
+                </MinecraftButton>
+              </div>
+            )}
 
-              {aplicadoresFiltrados.length === 0 && (
+            {aplicadoresFiltrados.length === 0 && (
+              <MinecraftPanel>
                 <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
                   Nenhum aplicador encontrado
                 </p>
-              )}
+              </MinecraftPanel>
+            )}
 
-              {/* RENDERIZAÇÃO CATEGORIZADA POR APLICADOR */}
-              {aplicadoresFiltrados.map((aplicador) => {
-                const listaOrdenada = ordenarPendenciasDoAplicador(pendenciasAgrupadas[aplicador]);
-                const totalPendentes = listaOrdenada.filter(p => !p.feito).length;
-                const aberto = grupoEstaAberto(aplicador);
+            {/* RENDERIZAÇÃO CATEGORIZADA POR APLICADOR — um painel branco por aplicador */}
+            {aplicadoresFiltrados.map((aplicador) => {
+              const listaOrdenada = ordenarPendenciasDoAplicador(pendenciasAgrupadas[aplicador]);
+              const totalPendentes = listaOrdenada.filter(p => !p.feito).length;
+              const aberto = grupoEstaAberto(aplicador);
 
-                return (
-                  <div key={aplicador}>
-                    {/* Título da Categoria (clicável = dropdown) + contador alinhado à direita */}
-                    <div
-                      onClick={() => toggleGrupo(aplicador)}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', margin: '0 0 10px 0', borderBottom: '2px solid #555', paddingBottom: '6px' }}
-                    >
-                      <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '12px', color: '#053762', textShadow: '1px 1px 0px #fff', margin: 0 }}>
-                        {aberto ? '▼' : '▶'} {aplicador}
-                      </h3>
-                      <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', color: totalPendentes > 0 ? '#a83232' : '#1d5930', textShadow: '1px 1px 0px #fff' }}>
-                        {totalPendentes} pendente{totalPendentes !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-
-                    {/* Cards do Aplicador */}
-                    {aberto && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {listaOrdenada.map((p) => (
-                          <div
-                            key={p.id}
-                            onClick={() => toggleFeito(p.id, p.feito)}
-                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', backgroundColor: p.feito ? '#a8e6cf' : '#C6C6C6', border: '2px solid', borderColor: p.feito ? '#3b7d4f' : '#fff #555 #555 #fff', boxShadow: p.feito ? 'inset -2px -2px 0px rgba(0,0,0,0.2)' : 'inset -2px -2px 0px #555, inset 2px 2px 0px #fff', cursor: 'pointer', imageRendering: 'pixelated' }}
-                          >
-                            <div style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                              <div style={{ fontSize: '10px', color: '#333', marginBottom: '8px' }}>{formatarDataPorExtenso(p.data)} ({p.dia_semana}) - {p.horario}</div>
-                              <div style={{ fontSize: '12px', color: '#000', lineHeight: '1.4' }}>Tita: <strong style={{ color: p.feito ? '#1d5930' : '#000' }}>{p.tita}</strong></div>
-                              {!p.feito && (
-                                <div style={{ fontSize: '9px', color: p.dias_pendente >= 3 ? '#a83232' : '#555', marginTop: '6px' }}>
-                                  ⏳ {textoDiasPendente(p.dias_pendente)}
-                                </div>
-                              )}
-                              {p.observacao && <div style={{ fontSize: '9px', color: '#555', marginTop: '6px' }}>Obs: {p.observacao}</div>}
-                            </div>
-                            <div style={{ fontSize: '24px', textShadow: '1px 1px 0 rgba(0,0,0,0.3)', marginLeft: '10px' }}>
-                              {p.feito ? '✅' : '⬜'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+              return (
+                <MinecraftPanel key={aplicador}>
+                  {/* Título da Categoria (clicável = dropdown) + contador alinhado à direita */}
+                  <div
+                    onClick={() => toggleGrupo(aplicador)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', margin: '0 0 10px 0', borderBottom: '2px solid #ddd', paddingBottom: '10px' }}
+                  >
+                    <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: 0 }}>
+                      {aplicador} {aberto ? '▼' : '▶'}
+                    </h3>
+                    <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px', color: '#1E1E1E' }}>
+                      {totalPendentes} Pendências
+                    </span>
                   </div>
-                );
-              })}
 
-            </div>
-          )}
-        </MinecraftPanel>
+                  {/* Cards do Aplicador */}
+                  {aberto && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {listaOrdenada.map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => toggleFeito(p.id, p.feito)}
+                          className={`visor-tita-card ${p.feito ? 'visor-tita-card--feito' : 'visor-tita-card--pendente'}`}
+                        >
+                          <div className="visor-tita-card-info">
+                            <div className="visor-tita-card-data">{formatarDataPorExtenso(p.data)} ({p.dia_semana}) - {p.horario}</div>
+                            <div className="visor-tita-card-nome">{p.tita}</div>
+                            {!p.feito && (
+                              <div className="visor-tita-card-dias">
+                                {textoDiasPendente(p.dias_pendente).replace(/^p/, 'P')}.
+                              </div>
+                            )}
+                            {p.observacao && <div className="visor-tita-card-obs">Obs: {p.observacao}</div>}
+                          </div>
+                          <div className={`visor-tita-circle ${p.feito ? 'visor-tita-circle--feito' : 'visor-tita-circle--pendente'}`}>
+                            {p.feito ? '✓' : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </MinecraftPanel>
+              );
+            })}
+
+          </div>
+        )}
       </div>
       )}
     </div>
