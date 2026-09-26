@@ -622,3 +622,28 @@ body {
 .visor-relato-card--perdeu-sessao {
   background: linear-gradient(135deg, #F2131A, #FF8C42);
 }
+
+/* Item selecionável em pill verde (Fila de Aprovação) e linha de lista
+   neutra arredondada (Gerenciar Aplicadores, etc.) — mesmo padrão de
+   bordas arredondadas pedido pelo Ken em 26/09/2026. */
+.visor-select-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #2EC4B6, #3BB273);
+}
+.visor-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #F4F6F8;
+  border: 2px solid #E2E6EA;
+}
