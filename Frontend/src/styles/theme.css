@@ -489,3 +489,78 @@ body {
   margin: 10px 0;
   width: 100%;
 }
+
+/* ================================================== */
+/* LISTA DE TITAS — busca e cards em pill, baseados nos mockups do Canva
+   enviados pelo Ken em 26/09/2026. */
+/* ================================================== */
+.visor-tita-search {
+  flex: 1;
+  min-width: 140px;
+  padding: 12px 18px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  border: 2px solid var(--visor-navy);
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: var(--visor-texto);
+  outline: none;
+  box-shadow: none;
+}
+.visor-tita-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px 14px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.visor-tita-card--pendente {
+  background: linear-gradient(135deg, #FBC80D, #FF8C42);
+}
+.visor-tita-card--feito {
+  background: linear-gradient(135deg, #2EC4B6, #3BB273);
+}
+.visor-tita-card-info {
+  font-family: Arial, Helvetica, sans-serif;
+}
+.visor-tita-card-data {
+  font-size: 12px;
+  color: #1E1E1E;
+  margin-bottom: 6px;
+}
+.visor-tita-card-nome {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E1E1E;
+  text-transform: uppercase;
+}
+.visor-tita-card-dias {
+  font-size: 11px;
+  color: #4a3a00;
+  margin-top: 6px;
+}
+.visor-tita-card-obs {
+  font-size: 11px;
+  color: #333;
+  margin-top: 6px;
+}
+.visor-tita-circle {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.visor-tita-circle--pendente {
+  background: #8A8A8A;
+}
+.visor-tita-circle--feito {
+  background: #1EA84C;
+  color: #FFFFFF;
+  font-size: 22px;
+  font-weight: 800;
+}
