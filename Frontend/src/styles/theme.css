@@ -53,10 +53,15 @@ body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   color: var(--visor-texto);
-  /* Fundo branco liso — a pedido do Ken pra bater com a referência visual
-     do TiTa Therapy (barra azul no topo, conteúdo branco embaixo). Substitui
-     o fundo com a arte pixel art usado antes do reskin. */
-  background-color: #FFFFFF;
+  /* Fundo com a arte pixel art (bg_capyos.png) + overlay azul a 75% de
+     opacidade — volta ao padrão de antes do reskin TiTa Therapy, a pedido
+     do Ken em 26/09/2026 (o fundo branco liso "ficou forte pros olhos"). */
+  background-color: var(--visor-fundo);
+  background-image: linear-gradient(rgba(126, 192, 238, 0.75), rgba(126, 192, 238, 0.75)), url('../assets/bg_capyos.png');
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   min-height: 100vh;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -332,6 +337,101 @@ body {
   line-height: 1;
   cursor: pointer;
   padding: 10px 12px;
+}
+/* Título na barra superior — mostra o nome do aplicador ou "Coordenação",
+   pra identificar de cara qual é o acesso atual (pedido do Ken em
+   26/09/2026, junto com os mockups do Canva da Lista de Titas). */
+.visor-topbar-title {
+  color: #FFFFFF;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  margin-left: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ================================================== */
+/* CARDS DA HOME EM PILL COM GRADIENTE — baseado nos mockups do Canva
+   enviados pelo Ken em 26/09/2026. Rótulo à esquerda, número dentro de um
+   círculo branco à direita. */
+/* ================================================== */
+.visor-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 999px;
+  padding: 14px 8px 14px 22px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 2px 2px 0 rgba(5, 55, 98, 0.15);
+}
+.visor-stat-card-label {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #1E1E1E;
+}
+.visor-stat-card-value {
+  flex-shrink: 0;
+  background: #FFFFFF;
+  color: #1E1E1E;
+  border-radius: 50%;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+}
+.visor-stat-card--pendentes {
+  background: linear-gradient(135deg, #F2131A, #FF8C42);
+}
+.visor-stat-card--ajustes {
+  background: linear-gradient(135deg, #FFD93D, #FF8C42);
+}
+.visor-stat-card--concluidos {
+  background: linear-gradient(135deg, #2EC4B6, #3BB273);
+}
+
+/* ================================================== */
+/* LAYOUT DA HOME — atalhos (botões, duplicando o menu lateral) + cards de
+   resumo. Celular: cards em cima, botões embaixo. Desktop (>=700px): 2
+   colunas, botões à esquerda, cards à direita. A quantidade de botões
+   sempre acompanha os itens reais do menu, não é fixa. */
+/* ================================================== */
+.visor-home-layout {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 20px;
+  width: 100%;
+}
+.visor-home-buttons {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.visor-home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+@media (min-width: 700px) {
+  .visor-home-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .visor-home-buttons {
+    flex: 0 0 260px;
+  }
+  .visor-home-cards {
+    flex: 1;
+  }
 }
 .visor-drawer {
   background: var(--visor-navy);
