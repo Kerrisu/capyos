@@ -375,7 +375,9 @@ export default function AppAplicadores() {
   // ==========================================
   const carregarListaAssistidos = async () => {
     try {
-      const response = await fetch(`${API_URL}/pacientes`);
+      const response = await fetch(`${API_URL}/pacientes`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!response.ok) return;
       const data = await response.json();
       setListaAssistidos(Object.keys(data.pacientes || {}));
@@ -928,10 +930,10 @@ export default function AppAplicadores() {
                     onChange={(e) => { setRelatoBuscaAssistido(e.target.value); setRelatoAssistidoEscolhido(''); setRelatoDropdownAberto(true); }}
                     onFocus={() => setRelatoDropdownAberto(true)}
                     onBlur={() => setTimeout(() => setRelatoDropdownAberto(false), 150)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }}
+                    className="visor-input"
                   />
                   {relatoDropdownAberto && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, backgroundColor: '#fff', border: '2px solid #555', maxHeight: '200px', overflowY: 'auto', boxShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>
+                    <div className="visor-dropdown-list" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 10, maxHeight: '200px', overflowY: 'auto', boxShadow: '2px 2px 0 rgba(0,0,0,0.3)' }}>
                       {assistidosFiltrados.length === 0 && (
                         <div style={{ padding: '8px 10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', color: '#777' }}>Nenhum assistido encontrado</div>
                       )}
@@ -960,13 +962,13 @@ export default function AppAplicadores() {
                     placeholder="Nome completo do assistido"
                     value={relatoAssistidoManual}
                     onChange={(e) => setRelatoAssistidoManual(e.target.value)}
-                    style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }}
+                    className="visor-input"
                   />
                   <span onClick={voltarParaListaRelato} style={{ fontSize: '9px', color: '#053762', cursor: 'pointer', textDecoration: 'underline', alignSelf: 'flex-start' }}>← voltar pra lista</span>
                 </div>
               )}
 
-              <select value={relatoDiaSemana} onChange={(e) => setRelatoDiaSemana(e.target.value)} style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
+              <select value={relatoDiaSemana} onChange={(e) => setRelatoDiaSemana(e.target.value)} className="visor-input">
                 <option value="">Dia da semana...</option>
                 {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
               </select>
@@ -979,7 +981,7 @@ export default function AppAplicadores() {
                   {HORARIOS_RELATO.map(h => (
                     <label
                       key={h}
-                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 10px', border: '2px solid #555', backgroundColor: relatoHorarios.includes(h) ? '#a8e6cf' : '#d9d9d9', cursor: 'pointer', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px' }}
+                      className={`visor-checkbox-chip ${relatoHorarios.includes(h) ? 'visor-checkbox-chip--marcado' : ''}`}
                     >
                       <input
                         type="checkbox"
@@ -993,7 +995,7 @@ export default function AppAplicadores() {
                 </div>
               </div>
 
-              <select value={relatoTipo} onChange={(e) => setRelatoTipo(e.target.value)} style={{ padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '10px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
+              <select value={relatoTipo} onChange={(e) => setRelatoTipo(e.target.value)} className="visor-input">
                 <option value="">O que aconteceu?</option>
                 <option value="sem_aba">Está sem ABA no TITA</option>
                 <option value="perdeu_sessao">Não possui mais essa sessão</option>
@@ -1004,7 +1006,8 @@ export default function AppAplicadores() {
                 onChange={(e) => setRelatoObservacao(e.target.value)}
                 placeholder="Observação (opcional)"
                 rows={2}
-                style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none', resize: 'vertical' }}
+                className="visor-input"
+                style={{ resize: 'vertical' }}
               />
 
               <MinecraftButton
@@ -1044,7 +1047,8 @@ export default function AppAplicadores() {
                   onChange={(e) => setTextoBulk(e.target.value)}
                   placeholder={"08/09/2026;09:00;LUCAS EDUARDO;ALICIA VITÓRIA;\n09/09/2026;14:30;GABRIEL NOVAES;VINICIUS GOMES;"}
                   rows={5}
-                  style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none', resize: 'vertical' }}
+                  className="visor-input"
+                  style={{ fontFamily: 'monospace', resize: 'vertical' }}
                 />
                 <MinecraftButton onClick={handleEnviarBulk} disabled={carregandoBulk || !textoBulk.trim()}>
                   {carregandoBulk ? 'Enviando...' : 'Cadastrar Titas'}
@@ -1122,11 +1126,11 @@ export default function AppAplicadores() {
 
                 {/* Filtros */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <select value={filtroRelatoDia} onChange={(e) => setFiltroRelatoDia(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
+                  <select value={filtroRelatoDia} onChange={(e) => setFiltroRelatoDia(e.target.value)} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
                     <option value="">Todos os dias</option>
                     {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
                   </select>
-                  <select value={filtroRelatoTipo} onChange={(e) => setFiltroRelatoTipo(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none' }}>
+                  <select value={filtroRelatoTipo} onChange={(e) => setFiltroRelatoTipo(e.target.value)} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
                     <option value="">Todos os tipos</option>
                     <option value="sem_aba">Está sem ABA no TITA</option>
                     <option value="perdeu_sessao">Não possui mais essa sessão</option>
@@ -1160,7 +1164,8 @@ export default function AppAplicadores() {
                       {relatos.map((r) => (
                         <label
                           key={r.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: r.tipo === 'sem_aba' ? '#ffd8a8' : '#ffc9c9', border: '2px solid #555', cursor: modoRemocaoRelatos ? 'pointer' : 'default', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', color: '#000' }}
+                          className={`visor-relato-card ${r.tipo === 'sem_aba' ? 'visor-relato-card--sem-aba' : 'visor-relato-card--perdeu-sessao'}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: modoRemocaoRelatos ? 'pointer' : 'default', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', color: '#1E1E1E' }}
                         >
                           {modoRemocaoRelatos && (
                             <input
@@ -1172,8 +1177,8 @@ export default function AppAplicadores() {
                           )}
                           <span style={{ lineHeight: '1.6' }}>
                             {r.assistido} <span style={{ color: '#333' }}>— {capitalizar(r.dia_semana)}, {r.horario}</span><br />
-                            <span style={{ color: '#053762' }}>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</span> · <span style={{ color: '#555' }}>relatado por {r.aplicador}</span>
-                            {r.observacao && <><br /><span style={{ color: '#555' }}>Obs: {r.observacao}</span></>}
+                            <span style={{ color: '#1E1E1E', fontWeight: 700 }}>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</span> · <span style={{ color: '#333' }}>relatado por {r.aplicador}</span>
+                            {r.observacao && <><br /><span style={{ color: '#333' }}>Obs: {r.observacao}</span></>}
                           </span>
                         </label>
                       ))}
