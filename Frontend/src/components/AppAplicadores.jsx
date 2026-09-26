@@ -756,14 +756,23 @@ export default function AppAplicadores() {
   // ==========================================
   const cardsDashboard = isCoordenacao
     ? [
-        { label: 'Titas pendentes registrados', valor: dashboardStats?.pendentes },
-        { label: 'Titas marcados como concluídos', valor: dashboardStats?.concluidos },
-        { label: 'Ajustes de sessões de aba no TiTa', valor: dashboardStats?.ajustes_aba },
+        { label: 'Titas pendentes registrados', valor: dashboardStats?.pendentes, tipo: 'pendentes' },
+        { label: 'Ajustes de sessões no TiTa', valor: dashboardStats?.ajustes_aba, tipo: 'ajustes' },
+        { label: 'Titas concluídos', valor: dashboardStats?.concluidos, tipo: 'concluidos' },
       ]
     : [
-        { label: 'Suas pendências em aberto', valor: dashboardStats?.pendentes },
-        { label: 'Concluídas por você', valor: dashboardStats?.concluidos },
+        { label: 'Titas pendentes', valor: dashboardStats?.pendentes, tipo: 'pendentes' },
       ];
+
+  // Atalhos da home — duplicam os mesmos itens do menu lateral, sem
+  // seções, igual ao mockup do Canva. A quantidade acompanha os itens
+  // reais do sistema (não é fixa em 5 como no mockup ilustrativo).
+  const atalhosHome = isCoordenacao
+    ? [
+        ...menuSecoesCoordenacao.flatMap((secao) => secao.itens),
+        ...menuItensSoltosCoordenacao,
+      ]
+    : menuItensAplicador;
 
   return (
     <>
@@ -774,6 +783,7 @@ export default function AppAplicadores() {
         <button className="visor-topbar-hamburger" onClick={() => setMenuAberto(true)} aria-label="Abrir menu de navegação">
           ☰
         </button>
+        <span className="visor-topbar-title">{isCoordenacao ? 'Coordenação' : usuarioNome}</span>
       </div>
 
       {/* ========================================== */}
@@ -861,18 +871,25 @@ export default function AppAplicadores() {
       {/* DASHBOARD (home) — números de resumo, a navegação agora é só o menu lateral */}
       {/* ========================================== */}
       {tela === 'home' && (
-        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {carregandoDashboard && !dashboardStats && (
-            <p style={{ color: '#F0F8FF', fontSize: '12px', textAlign: 'center' }}>Carregando...</p>
-          )}
-          {cardsDashboard.map((card) => (
-            <MinecraftPanel key={card.label}>
-              <p style={{ margin: 0, fontSize: '11px', color: '#F0F8FF' }}>{card.label}</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '28px', fontWeight: 'bold' }}>
-                {card.valor ?? '—'}
-              </p>
-            </MinecraftPanel>
-          ))}
+        <div className="visor-home-layout">
+          <div className="visor-home-buttons">
+            {atalhosHome.map((item) => (
+              <MinecraftButton key={item.label} onClick={item.onClick}>
+                {item.label}
+              </MinecraftButton>
+            ))}
+          </div>
+          <div className="visor-home-cards">
+            {carregandoDashboard && !dashboardStats && (
+              <p style={{ color: 'var(--visor-navy)', fontSize: '12px', textAlign: 'center' }}>Carregando...</p>
+            )}
+            {cardsDashboard.map((card) => (
+              <div key={card.label} className={`visor-stat-card visor-stat-card--${card.tipo}`}>
+                <span className="visor-stat-card-label">{card.label}</span>
+                <span className="visor-stat-card-value">{card.valor ?? '—'}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
