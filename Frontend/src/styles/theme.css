@@ -634,6 +634,37 @@ body {
   background: linear-gradient(135deg, #F2131A, #FF8C42);
 }
 
+/* Registro de Referência/Piscina do Direcionamento */
+.visor-direcionamento-card {
+  border-radius: 16px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1E1E1E;
+}
+.visor-direcionamento-card--referencia {
+  background: linear-gradient(135deg, #FBC80D, #FF8C42);
+}
+.visor-direcionamento-card--piscina {
+  background: linear-gradient(135deg, #A3DBFF, #4FA3E3);
+}
+.visor-direcionamento-conflito {
+  flex-shrink: 0;
+  background: var(--visor-vermelho);
+  color: #FFFFFF;
+  font-weight: 800;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
 /* Item selecionável em pill verde (Fila de Aprovação) e linha de lista
    neutra arredondada (Gerenciar Aplicadores, etc.) — mesmo padrão de
    bordas arredondadas pedido pelo Ken em 26/09/2026. */
