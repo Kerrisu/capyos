@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import MinecraftButton from "./MinecraftButton";
 import MinecraftPanel from "./MinecraftPanel";
-import { buscarPaciente, salvarPaciente } from "../api/capyos";
+import { buscarPaciente, salvarPaciente, obterConfiguracoesGerais } from "../api/capyos";
 
 const DEBUG_TAG = "🔧[CAPYOS-FRONTEND-DEBUG]";
 
@@ -15,7 +15,10 @@ const CONFIG_PADRAO = {
   grupo_match: "",
 };
 
-const SALAS = Array.from({ length: 13 }, (_, i) => `ABA ${String(i + 1).padStart(2, "0")}`);
+// Fallback caso a busca de configuracoes-gerais falhe (ex: sem internet) —
+// nunca deve ser a fonte principal. A lista real vem de
+// config.todas_as_salas, cadastrada em Configurações Gerais.
+const SALAS_FALLBACK = Array.from({ length: 13 }, (_, i) => `ABA ${String(i + 1).padStart(2, "0")}`);
 
 const inputStyle = {
   width: "100%",
@@ -69,6 +72,19 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
   const [config, setConfig] = useState(CONFIG_PADRAO);
   const [erro, setErro] = useState("");
   const [modoNovoGrupo, setModoNovoGrupo] = useState(false);
+  const [salas, setSalas] = useState(SALAS_FALLBACK);
+
+  useEffect(() => {
+    obterConfiguracoesGerais()
+      .then((data) => {
+        if (Array.isArray(data.todas_as_salas) && data.todas_as_salas.length > 0) {
+          setSalas(data.todas_as_salas);
+        }
+      })
+      .catch((e) => {
+        console.error(`${DEBUG_TAG} Erro ao buscar lista de salas cadastradas, usando fallback:`, e);
+      });
+  }, []);
 
   useEffect(() => {
     if (!modoEdicao) return;
@@ -137,7 +153,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
 
         {estado === "erro" && (
           <>
-            <p style={{ fontSize: 16, color: "#8B0000", textAlign: "center", marginBottom: 12 }}>
+            <p style={{ fontSize: 16, color: "var(--visor-vermelho)", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
             <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
@@ -167,12 +183,12 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
               style={selectStyle}
             >
               <option value="">— Nenhuma —</option>
-              {SALAS.map((sala) => (
+              {salas.map((sala) => (
                 <option key={sala} value={sala}>
                   {sala}
                 </option>
               ))}
-              {config.sala_fixa && !SALAS.includes(config.sala_fixa) && (
+              {config.sala_fixa && !salas.includes(config.sala_fixa) && (
                 <option value={config.sala_fixa}>{config.sala_fixa} (valor atual, fora da lista)</option>
               )}
             </select>
@@ -264,7 +280,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
             />
 
             {erro && (
-              <p style={{ fontSize: 15, color: "#8B0000", marginBottom: 10 }}>
+              <p style={{ fontSize: 15, color: "var(--visor-vermelho)", marginBottom: 10 }}>
                 🔴 {erro}
               </p>
             )}
