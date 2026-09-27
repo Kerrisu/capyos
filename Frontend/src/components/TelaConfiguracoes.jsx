@@ -42,10 +42,8 @@ const secaoTituloStyle = {
   fontSize: 17,
   fontWeight: "bold",
   color: "#2B2B2B",
-  marginTop: 18,
+  marginTop: 0,
   marginBottom: 6,
-  borderBottom: "2px solid #373737",
-  paddingBottom: 3,
 };
 
 const secaoAjudaStyle = {
@@ -83,7 +81,7 @@ function CheckboxCampo({ checked, onChange, label }) {
 function GradeSalas({ todasAsSalas, selecionadas, onAlternar }) {
   if (todasAsSalas.length === 0) {
     return (
-      <p style={{ fontSize: 14, color: "#8B0000", marginBottom: 10 }}>
+      <p style={{ fontSize: 14, color: "var(--visor-vermelho)", marginBottom: 10 }}>
         Cadastre pelo menos uma sala em "Todas as salas do sistema" primeiro.
       </p>
     );
@@ -231,7 +229,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
 
         {estado === "erro" && (
           <>
-            <p style={{ fontSize: 16, color: "#8B0000", textAlign: "center", marginBottom: 12 }}>
+            <p style={{ fontSize: 16, color: "var(--visor-vermelho)", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
             <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
@@ -240,209 +238,224 @@ export default function TelaConfiguracoes({ onVoltar }) {
 
         {(estado === "pronto" || estado === "salvando") && (
           <>
-            <div style={secaoTituloStyle}>Planilhas</div>
-            <label style={labelStyle}>URL do Direcionamento de Salas:</label>
-            <input
-              type="text"
-              value={config.url_planilha}
-              onChange={(e) => atualizarCampo("url_planilha", e.target.value)}
-              disabled={estado === "salvando"}
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              style={inputStyle}
-            />
-            <label style={labelStyle}>URL da Vacância:</label>
-            <input
-              type="text"
-              value={config.url_vacancia}
-              onChange={(e) => atualizarCampo("url_vacancia", e.target.value)}
-              disabled={estado === "salvando"}
-              placeholder="https://docs.google.com/spreadsheets/d/..."
-              style={inputStyle}
-            />
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Planilhas</div>
+              <label style={labelStyle}>URL do Direcionamento de Salas:</label>
+              <input
+                type="text"
+                value={config.url_planilha}
+                onChange={(e) => atualizarCampo("url_planilha", e.target.value)}
+                disabled={estado === "salvando"}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                style={inputStyle}
+              />
+              <label style={labelStyle}>URL da Vacância:</label>
+              <input
+                type="text"
+                value={config.url_vacancia}
+                onChange={(e) => atualizarCampo("url_vacancia", e.target.value)}
+                disabled={estado === "salvando"}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                style={{ ...inputStyle, marginBottom: 0 }}
+              />
+            </div>
 
-            <div style={secaoTituloStyle}>Divisão de sala</div>
-            <CheckboxCampo
-              checked={config.permite_divisao_geral}
-              onChange={(v) => atualizarCampo("permite_divisao_geral", v)}
-              label="Permitir divisão de sala (regra geral)"
-            />
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Divisão de sala</div>
+              <CheckboxCampo
+                checked={config.permite_divisao_geral}
+                onChange={(v) => atualizarCampo("permite_divisao_geral", v)}
+                label="Permitir divisão de sala (regra geral)"
+              />
+            </div>
 
-            <div style={secaoTituloStyle}>Todas as salas do sistema</div>
-            <p style={secaoAjudaStyle}>
-              Universo completo de salas conhecidas — inclui as 13 ABAs e
-              qualquer sala especial (ex: Musicoterapia, Caixa de Areia).
-              As grades abaixo só mostram salas que estiverem aqui.
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-              {config.todas_as_salas.map((sala) => (
-                <span
-                  key={sala}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    fontSize: 14,
-                    fontFamily: "Arial, Helvetica, sans-serif",
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    border: "2px solid var(--visor-navy)",
-                    background: "#F0F8FF",
-                    color: "#2B2B2B",
-                  }}
-                >
-                  {sala}
-                  <button
-                    type="button"
-                    onClick={() => removerSala(sala)}
-                    disabled={estado === "salvando"}
-                    title={`Remover ${sala}`}
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Todas as salas do sistema</div>
+              <p style={secaoAjudaStyle}>
+                Universo completo de salas conhecidas — inclui as 13 ABAs e
+                qualquer sala especial (ex: Musicoterapia, Caixa de Areia).
+                As grades abaixo só mostram salas que estiverem aqui.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                {config.todas_as_salas.map((sala) => (
+                  <span
+                    key={sala}
                     style={{
-                      marginLeft: 6,
-                      fontFamily: "Arial, Helvetica, sans-serif",
+                      display: "inline-flex",
+                      alignItems: "center",
                       fontSize: 14,
+                      fontFamily: "Arial, Helvetica, sans-serif",
+                      padding: "4px 10px",
+                      borderRadius: 999,
                       border: "none",
-                      background: "transparent",
-                      color: "#8B0000",
-                      cursor: "pointer",
-                      padding: 0,
+                      background: "#FFFFFF",
+                      color: "#2B2B2B",
                     }}
                   >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {config.todas_as_salas.length === 0 && (
-                <span style={{ fontSize: 14, color: "#8B0000" }}>Nenhuma sala cadastrada ainda.</span>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-              <input
-                type="text"
-                value={novaSalaTexto}
-                onChange={(e) => setNovaSalaTexto(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), adicionarSala())}
-                disabled={estado === "salvando"}
-                placeholder="Ex: ABA 14, MUSICOTERAPIA COM TATAMES..."
-                style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
-              />
-              <MinecraftButton
-                onClick={adicionarSala}
-                disabled={estado === "salvando"}
-                style={{ width: "auto", flexShrink: 0, marginBottom: 0, whiteSpace: "nowrap" }}
-              >
-                + Add
-              </MinecraftButton>
-            </div>
-
-            <div style={secaoTituloStyle}>Salas bloqueadas</div>
-            <p style={secaoAjudaStyle}>Não recebem ninguém automaticamente nem manual.</p>
-            <GradeSalas
-              todasAsSalas={config.todas_as_salas}
-              selecionadas={config.salas_bloqueadas}
-              onAlternar={(sala) => alternarNaLista("salas_bloqueadas", sala)}
-            />
-
-            <div style={secaoTituloStyle}>Salas do térreo</div>
-            <p style={secaoAjudaStyle}>
-              Marcadas aqui = térreo. As demais (dentre "Todas as salas") são
-              tratadas como mezanino.
-            </p>
-            <GradeSalas
-              todasAsSalas={config.todas_as_salas}
-              selecionadas={config.ordem_salas_terreo}
-              onAlternar={(sala) => alternarNaLista("ordem_salas_terreo", sala)}
-            />
-
-            <div style={secaoTituloStyle}>Salas fora do pool automático</div>
-            <p style={secaoAjudaStyle}>
-              Continuam existindo e aceitando sala fixa, mas o algoritmo
-              nunca aloca ninguém nelas automaticamente (ex: Musicoterapia
-              com Tatames, Caixa de Areia, Mercado da Inclusão).
-            </p>
-            <GradeSalas
-              todasAsSalas={config.todas_as_salas}
-              selecionadas={config.salas_fora_do_pool}
-              onAlternar={(sala) => alternarNaLista("salas_fora_do_pool", sala)}
-            />
-
-            <div style={secaoTituloStyle}>Aplicadores formados</div>
-            <p style={secaoAjudaStyle}>
-              Igual a Regra do Jorge: assistidos desse profissional vão
-              sempre pra sala configurada, ignorando bloqueio e demais
-              regras. Combina com o início do nome do profissional na
-              planilha.
-            </p>
-            {Object.entries(config.aplicadores_formados).length === 0 && (
-              <p style={{ fontSize: 14, color: "#555", marginBottom: 8 }}>Nenhum cadastrado ainda.</p>
-            )}
-            {Object.entries(config.aplicadores_formados).map(([nomeAplicador, sala]) => (
-              <div
-                key={nomeAplicador}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontSize: 15,
-                  color: "#2B2B2B",
-                  padding: "4px 0",
-                  borderBottom: "1px solid #E0E0E0",
-                  marginBottom: 4,
-                }}
-              >
-                <span>
-                  <strong>{nomeAplicador}</strong> → {sala}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removerAplicador(nomeAplicador)}
+                    {sala}
+                    <button
+                      type="button"
+                      onClick={() => removerSala(sala)}
+                      disabled={estado === "salvando"}
+                      title={`Remover ${sala}`}
+                      style={{
+                        marginLeft: 6,
+                        fontFamily: "Arial, Helvetica, sans-serif",
+                        fontSize: 14,
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--visor-vermelho)",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {config.todas_as_salas.length === 0 && (
+                  <span style={{ fontSize: 14, color: "var(--visor-vermelho)" }}>Nenhuma sala cadastrada ainda.</span>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  type="text"
+                  value={novaSalaTexto}
+                  onChange={(e) => setNovaSalaTexto(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), adicionarSala())}
                   disabled={estado === "salvando"}
+                  placeholder="Ex: ABA 14, MUSICOTERAPIA COM TATAMES..."
+                  style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
+                />
+                <MinecraftButton
+                  onClick={adicionarSala}
+                  disabled={estado === "salvando"}
+                  style={{ width: "auto", flexShrink: 0, marginBottom: 0, whiteSpace: "nowrap" }}
+                >
+                  + Add
+                </MinecraftButton>
+              </div>
+            </div>
+
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Salas bloqueadas</div>
+              <p style={secaoAjudaStyle}>Não recebem ninguém automaticamente nem manual.</p>
+              <GradeSalas
+                todasAsSalas={config.todas_as_salas}
+                selecionadas={config.salas_bloqueadas}
+                onAlternar={(sala) => alternarNaLista("salas_bloqueadas", sala)}
+              />
+            </div>
+
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Salas do térreo</div>
+              <p style={secaoAjudaStyle}>
+                Marcadas aqui = térreo. As demais (dentre "Todas as salas") são
+                tratadas como mezanino.
+              </p>
+              <GradeSalas
+                todasAsSalas={config.todas_as_salas}
+                selecionadas={config.ordem_salas_terreo}
+                onAlternar={(sala) => alternarNaLista("ordem_salas_terreo", sala)}
+              />
+            </div>
+
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Salas fora do pool automático</div>
+              <p style={secaoAjudaStyle}>
+                Continuam existindo e aceitando sala fixa, mas o algoritmo
+                nunca aloca ninguém nelas automaticamente (ex: Musicoterapia
+                com Tatames, Caixa de Areia, Mercado da Inclusão).
+              </p>
+              <GradeSalas
+                todasAsSalas={config.todas_as_salas}
+                selecionadas={config.salas_fora_do_pool}
+                onAlternar={(sala) => alternarNaLista("salas_fora_do_pool", sala)}
+              />
+            </div>
+
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
+              <div style={secaoTituloStyle}>Aplicadores formados</div>
+              <p style={secaoAjudaStyle}>
+                Igual a Regra do Jorge: assistidos desse profissional vão
+                sempre pra sala configurada, ignorando bloqueio e demais
+                regras. Combina com o início do nome do profissional na
+                planilha.
+              </p>
+              {Object.entries(config.aplicadores_formados).length === 0 && (
+                <p style={{ fontSize: 14, color: "#555", marginBottom: 8 }}>Nenhum cadastrado ainda.</p>
+              )}
+              {Object.entries(config.aplicadores_formados).map(([nomeAplicador, sala]) => (
+                <div
+                  key={nomeAplicador}
                   style={{
-                    fontFamily: "Arial, Helvetica, sans-serif",
-                    fontSize: 14,
-                    padding: "5px 14px",
-                    borderRadius: 999,
-                    border: "none",
-                    background: "var(--visor-vermelho)",
-                    color: "#FFFFFF",
-                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    fontSize: 15,
+                    color: "#2B2B2B",
+                    padding: "8px 10px",
+                    marginBottom: 6,
+                    background: "#FFFFFF",
+                    borderRadius: 12,
                   }}
                 >
-                  Remover
-                </button>
+                  <span>
+                    <strong>{nomeAplicador}</strong> → {sala}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removerAplicador(nomeAplicador)}
+                    disabled={estado === "salvando"}
+                    style={{
+                      fontFamily: "Arial, Helvetica, sans-serif",
+                      fontSize: 14,
+                      padding: "5px 14px",
+                      borderRadius: 999,
+                      border: "none",
+                      background: "var(--visor-vermelho)",
+                      color: "#FFFFFF",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Remover
+                  </button>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <input
+                  type="text"
+                  value={novoAplicadorNome}
+                  onChange={(e) => setNovoAplicadorNome(e.target.value)}
+                  disabled={estado === "salvando"}
+                  placeholder="Nome do profissional"
+                  style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
+                />
+                <select
+                  value={novoAplicadorSala}
+                  onChange={(e) => setNovoAplicadorSala(e.target.value)}
+                  disabled={estado === "salvando"}
+                  style={{ ...inputStyle, marginBottom: 0, width: 120 }}
+                >
+                  <option value="">Sala...</option>
+                  {config.todas_as_salas.map((sala) => (
+                    <option key={sala} value={sala}>
+                      {sala}
+                    </option>
+                  ))}
+                </select>
+                <MinecraftButton
+                  onClick={adicionarAplicador}
+                  disabled={estado === "salvando" || !novoAplicadorNome.trim() || !novoAplicadorSala}
+                  style={{ width: "auto", flexShrink: 0, marginBottom: 0, whiteSpace: "nowrap" }}
+                >
+                  + Add
+                </MinecraftButton>
               </div>
-            ))}
-            <div style={{ display: "flex", gap: 6, marginTop: 8, marginBottom: 14 }}>
-              <input
-                type="text"
-                value={novoAplicadorNome}
-                onChange={(e) => setNovoAplicadorNome(e.target.value)}
-                disabled={estado === "salvando"}
-                placeholder="Nome do profissional"
-                style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
-              />
-              <select
-                value={novoAplicadorSala}
-                onChange={(e) => setNovoAplicadorSala(e.target.value)}
-                disabled={estado === "salvando"}
-                style={{ ...inputStyle, marginBottom: 0, width: 120 }}
-              >
-                <option value="">Sala...</option>
-                {config.todas_as_salas.map((sala) => (
-                  <option key={sala} value={sala}>
-                    {sala}
-                  </option>
-                ))}
-              </select>
-              <MinecraftButton
-                onClick={adicionarAplicador}
-                disabled={estado === "salvando" || !novoAplicadorNome.trim() || !novoAplicadorSala}
-                style={{ width: "auto", flexShrink: 0, marginBottom: 0, whiteSpace: "nowrap" }}
-              >
-                + Add
-              </MinecraftButton>
             </div>
 
             {erro && (
-              <p style={{ fontSize: 15, color: "#8B0000", marginBottom: 10 }}>
+              <p style={{ fontSize: 15, color: "var(--visor-vermelho)", marginBottom: 10 }}>
                 🔴 {erro}
               </p>
             )}
