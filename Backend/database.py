@@ -14,7 +14,12 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+# Mesmo fuso usado em main.py pra tudo relacionado a horário/agendamento —
+# nunca confiar em NOW()/datetime.now() cru, que no Neon roda em UTC.
+FUSO_RECIFE = ZoneInfo("America/Recife")
 
 DEBUG_TAG = "🔧[CAPYOS-DB-DEBUG]"
 
@@ -638,17 +643,21 @@ def salvar_horario_registro_direcionamento(horario: str):
 
 def criar_execucao_direcionamento(data_referencia, dia_semana, aba_usada, tipo_execucao,
                                    status, mensagem_erro, total_sessoes) -> dict:
-    """Registra uma rodada (manual ou automática) no log de execuções."""
+    """Registra uma rodada (manual ou automática) no log de execuções.
+    data_hora_execucao é calculado aqui em horário de Recife (não usa o
+    DEFAULT NOW() da coluna, que no Neon roda em UTC e deixava o horário
+    mostrado pro usuário 3h adiantado)."""
+    agora_recife = datetime.now(FUSO_RECIFE).replace(tzinfo=None)
     conn = get_connection()
     try:
         with conn.cursor(row_factory=dict_row) as cur:
             cur.execute("""
                 INSERT INTO execucoes_direcionamento
-                    (data_referencia, dia_semana, aba_usada, tipo_execucao, status, mensagem_erro, total_sessoes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (data_hora_execucao, data_referencia, dia_semana, aba_usada, tipo_execucao, status, mensagem_erro, total_sessoes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, data_hora_execucao, data_referencia, dia_semana, aba_usada,
                           tipo_execucao, status, mensagem_erro, total_sessoes;
-            """, (data_referencia, dia_semana, aba_usada, tipo_execucao, status, mensagem_erro, total_sessoes))
+            """, (agora_recife, data_referencia, dia_semana, aba_usada, tipo_execucao, status, mensagem_erro, total_sessoes))
             linha = dict(cur.fetchone())
         conn.commit()
         linha["data_hora_execucao"] = linha["data_hora_execucao"].isoformat()

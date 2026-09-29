@@ -905,6 +905,16 @@ def _executar_leitura_direcionamento(tipo_execucao: str) -> dict:
     )
     database.inserir_sessoes_direcionamento(execucao["id"], hoje, nome_aba, resultado)
 
+    # ler_referencia_e_piscina() não inclui data_referencia em cada sessão
+    # (só tita/horario/tipo/aplicador/conflito) — só é adicionado na hora de
+    # inserir no banco. Sem isso aqui, a resposta imediata do "Forçar agora"
+    # ficava com um formato diferente do que /direcionamento/sessoes devolve
+    # depois (que já vem com data_referencia do banco), quebrando a formatação
+    # do texto pra copiar no frontend. Adicionando aqui os dois formatos ficam
+    # iguais.
+    for sessao in resultado:
+        sessao["data_referencia"] = hoje.isoformat()
+
     print(f"{DEBUG_TAG} _executar_leitura_direcionamento: {len(resultado)} sessões salvas (execucao_id={execucao['id']}, tipo={tipo_execucao}).")
     return {"execucao": execucao, "sessoes": resultado}
 
