@@ -114,7 +114,7 @@ export default function TelaPacientes({ onVoltar }) {
     : pacientes;
 
   return (
-    <div style={{ width: "100%", maxWidth: 460 }}>
+    <div className="visor-conteudo" style={{ width: "100%" }}>
       <MinecraftPanel title="Gerenciar Assistidos">
         {estado === "carregando" && (
           <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>

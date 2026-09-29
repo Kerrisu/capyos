@@ -143,7 +143,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
   }
 
   return (
-    <div style={{ width: "100%", maxWidth: 460 }}>
+    <div className="visor-conteudo" style={{ width: "100%" }}>
       <MinecraftPanel title={modoEdicao ? `Editar: ${nomeInicial}` : "Novo Assistido"}>
         {estado === "carregando" && (
           <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>

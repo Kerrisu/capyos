@@ -219,7 +219,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
   }
 
   return (
-    <div style={{ width: "100%", maxWidth: 480 }}>
+    <div className="visor-conteudo" style={{ width: "100%" }}>
       <MinecraftPanel title="Configurações Gerais">
         {estado === "carregando" && (
           <p style={{ fontSize: 18, textAlign: "center", color: "#2B2B2B" }}>

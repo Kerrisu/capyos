@@ -57,6 +57,12 @@ export default function AppAplicadores() {
   const [execucaoAberta, setExecucaoAberta] = useState(null);
   const [sessoesDaExecucao, setSessoesDaExecucao] = useState([]);
   const [carregandoSessoes, setCarregandoSessoes] = useState(false);
+  const [copiadoDirecionamento, setCopiadoDirecionamento] = useState(false);
+  const [buscaHistoricoDirecionamento, setBuscaHistoricoDirecionamento] = useState('');
+  const [buscaModalDirecionamento, setBuscaModalDirecionamento] = useState('');
+  const [selecionadosHistoricoDirecionamento, setSelecionadosHistoricoDirecionamento] = useState([]);
+  const [confirmandoRemocaoHistoricoDirecionamento, setConfirmandoRemocaoHistoricoDirecionamento] = useState(false);
+  const [removendoHistoricoDirecionamento, setRemovendoHistoricoDirecionamento] = useState(false);
 
   // FILA DE APROVAÇÃO DE REMOÇÃO (coordenação)
   const [selecionadosRemocao, setSelecionadosRemocao] = useState([]);
@@ -302,7 +308,7 @@ export default function AppAplicadores() {
   const carregarExecucoesDirecionamento = async (diaFiltro) => {
     setCarregandoExecucoes(true);
     try {
-      const query = diaFiltro ? `?dia_semana=${encodeURIComponent(diaFiltro)}` : '';
+      const query = diaFiltro ? `?dia_semana=${encodeURIComponent(diaFiltro)}&limite=300` : '?limite=300';
       const response = await fetch(`${API_URL}/direcionamento/execucoes${query}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -336,12 +342,10 @@ export default function AppAplicadores() {
     }
   };
 
+  // Abre o modal do histórico com as sessões daquela execução
   const handleVerSessoesExecucao = async (execucaoId) => {
-    if (execucaoAberta === execucaoId) {
-      setExecucaoAberta(null);
-      return;
-    }
     setExecucaoAberta(execucaoId);
+    setBuscaModalDirecionamento('');
     setCarregandoSessoes(true);
     try {
       const response = await fetch(`${API_URL}/direcionamento/sessoes?execucao_id=${execucaoId}`, {
@@ -355,6 +359,40 @@ export default function AppAplicadores() {
       setSessoesDaExecucao([]);
     } finally {
       setCarregandoSessoes(false);
+    }
+  };
+
+  const handleFecharModalDirecionamento = () => {
+    setExecucaoAberta(null);
+    setSessoesDaExecucao([]);
+    setBuscaModalDirecionamento('');
+  };
+
+  const toggleSelecaoExecucaoDirecionamento = (id) => {
+    setConfirmandoRemocaoHistoricoDirecionamento(false);
+    setSelecionadosHistoricoDirecionamento((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleRemoverExecucoesSelecionadas = async () => {
+    if (selecionadosHistoricoDirecionamento.length === 0) return;
+    setRemovendoHistoricoDirecionamento(true);
+    try {
+      const response = await fetch(`${API_URL}/direcionamento/execucoes/lote`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ids: selecionadosHistoricoDirecionamento })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Erro ao remover o histórico');
+      setSelecionadosHistoricoDirecionamento([]);
+      setConfirmandoRemocaoHistoricoDirecionamento(false);
+      carregarExecucoesDirecionamento(filtroDiaDirecionamento);
+    } catch (err) {
+      console.error('Erro ao remover histórico do Direcionamento:', err);
+    } finally {
+      setRemovendoHistoricoDirecionamento(false);
     }
   };
 
@@ -779,6 +817,45 @@ export default function AppAplicadores() {
     return `${dia} de ${nomeMesCapitalizado} de ${ano}`;
   };
 
+  // DIRECIONAMENTO: converte "2026-09-29" pra "29/09/2026"
+  const isoParaDDMMAAAA = (dataIso) => {
+    const [ano, mes, dia] = dataIso.split('-');
+    return `${dia}/${mes}/${ano}`;
+  };
+
+  // DIRECIONAMENTO: monta o texto pronto pra colar no Cadastro em Massa
+  // (DATA;HORARIO;TITA;APLICADOR;OBSERVACAO). Referência e Piscina entram
+  // juntas, sem distinção — pro Titas as duas são sessão normal. Sessões
+  // com conflito (mesma tita/horário com aplicador diferente na planilha)
+  // ganham uma observação avisando quem mais aparece, pra checar na mão.
+  const formatarSessoesParaBulk = (sessoes) => {
+    const grupos = {};
+    sessoes.forEach((s) => {
+      const chave = `${s.data_referencia}|${s.horario}|${s.tita}`;
+      (grupos[chave] = grupos[chave] || []).push(s);
+    });
+
+    return sessoes.map((s) => {
+      let observacao = '';
+      if (s.conflito) {
+        const chave = `${s.data_referencia}|${s.horario}|${s.tita}`;
+        const outros = [...new Set(grupos[chave].filter((x) => x.aplicador !== s.aplicador).map((x) => x.aplicador))];
+        observacao = outros.length > 0
+          ? `CONFLITO: também aparece com ${outros.join(', ')}`
+          : 'CONFLITO: conferir aplicador';
+      }
+      return `${isoParaDDMMAAAA(s.data_referencia)};${s.horario};${s.tita};${s.aplicador};${observacao}`;
+    }).join('\n');
+  };
+
+  const handleCopiarSessoesDirecionamento = (sessoes) => {
+    const texto = formatarSessoesParaBulk(sessoes);
+    navigator.clipboard.writeText(texto).then(() => {
+      setCopiadoDirecionamento(true);
+      setTimeout(() => setCopiadoDirecionamento(false), 1800);
+    });
+  };
+
   const pendenciasParaAprovacao = pendencias.filter(p => p.feito);
 
   // Extrai o login do próprio usuário a partir do JWT (campo "sub"),
@@ -864,15 +941,20 @@ export default function AppAplicadores() {
       titulo: 'Configurações',
       itens: [
         { label: 'Gerenciar Aplicadores', onClick: () => irPara('gerenciar-usuarios') },
-        { label: 'Gerenciar Assistidos', onClick: () => irPara('salas-pacientes') },
-        { label: 'Configurações Gerais', onClick: () => irPara('salas-configuracoes') },
+        // Gerenciar Assistidos e Configurações Gerais escondidos do menu a
+        // pedido do Ken em 29/09/2026 — não quer mexer em vacância por
+        // enquanto. Telas continuam existindo (TelaPacientes/TelaConfiguracoes),
+        // só não tem mais acesso por aqui. Reativar: descomentar as 2 linhas
+        // abaixo.
+        // { label: 'Gerenciar Assistidos', onClick: () => irPara('salas-pacientes') },
+        // { label: 'Configurações Gerais', onClick: () => irPara('salas-configuracoes') },
       ],
     },
   ];
 
-  const menuItensSoltosCoordenacao = [
-    { label: 'Gerar Escala', onClick: () => irPara('gerar-escala') },
-  ];
+  // Gerar Escala escondido do menu pelo mesmo motivo acima — reativar
+  // devolvendo o item aqui dentro.
+  const menuItensSoltosCoordenacao = [];
 
   const menuItensAplicador = [
     { label: 'Lista de Titas', onClick: () => irPara('titas') },
@@ -987,7 +1069,7 @@ export default function AppAplicadores() {
         </div>
       )}
 
-      <div style={{ width: '100%', maxWidth: '600px', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', paddingTop: 'calc(56px + env(safe-area-inset-top, 0px) + 20px)', boxSizing: 'border-box' }}>
+      <div className="visor-conteudo" style={{ width: '100%', minHeight: '100vh', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 16px', paddingTop: 'calc(56px + env(safe-area-inset-top, 0px) + 20px)', boxSizing: 'border-box' }}>
 
       <div style={{ width: '100%', marginBottom: '24px', textAlign: 'left' }}>
         <h2 className="mc-title" style={{ fontSize: 16, margin: 0, lineHeight: '1.3' }}>Olá, {usuarioNome}</h2>
@@ -1270,35 +1352,25 @@ export default function AppAplicadores() {
                       {resultadoDirecionamento.execucao.status === 'SEM_ABA_HOJE' && '⚠️ Hoje não tem aba correspondente no Direcionamento.'}
                     </p>
                     {resultadoDirecionamento.sessoes.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {resultadoDirecionamento.sessoes.map((s, i) => (
-                          <div key={i} className={`visor-direcionamento-card visor-direcionamento-card--${s.tipo === 'PISCINA' ? 'piscina' : 'referencia'}`}>
-                            <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · {s.tipo === 'PISCINA' ? 'Piscina' : 'Referência'}</span>
-                            {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
-                          </div>
-                        ))}
-                      </div>
+                      <>
+                        <p style={{ fontSize: '11px', color: '#333', margin: '0 0 6px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                          Pronto pra colar direto no Cadastro em Massa:
+                        </p>
+                        <textarea
+                          readOnly
+                          value={formatarSessoesParaBulk(resultadoDirecionamento.sessoes)}
+                          onFocus={(e) => e.target.select()}
+                          rows={6}
+                          className="visor-input"
+                          style={{ fontFamily: 'monospace', fontSize: '11px', resize: 'vertical', marginBottom: '8px' }}
+                        />
+                        <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(resultadoDirecionamento.sessoes)}>
+                          {copiadoDirecionamento ? '✅ Copiado!' : 'Copiar'}
+                        </MinecraftButton>
+                      </>
                     )}
                   </div>
                 )}
-              </div>
-
-              {/* Cron externo */}
-              <div className="visor-tita-group">
-                <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: '0 0 10px 0' }}>
-                  Cron externo (só configurar 1 vez)
-                </h3>
-                <p style={{ fontSize: '12px', color: '#333', margin: '0 0 10px 0', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1.6' }}>
-                  O servidor (Render grátis) hiberna sozinho, então precisa de algo externo batendo nesse endereço a cada poucos minutos pra "acordar" ele no horário certo. Cadastre essa URL num serviço tipo cron-job.org (grátis), trocando SUA_CHAVE_AQUI pela chave configurada na variável DIRECIONAMENTO_TICK_SECRET do Render:
-                </p>
-                <input
-                  type="text"
-                  readOnly
-                  value={`${API_URL}/direcionamento/tick?chave=SUA_CHAVE_AQUI`}
-                  onFocus={(e) => e.target.select()}
-                  className="visor-input"
-                  style={{ fontFamily: 'monospace', fontSize: '11px' }}
-                />
               </div>
 
               {/* Histórico de execuções */}
@@ -1306,62 +1378,168 @@ export default function AppAplicadores() {
                 <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: '0 0 10px 0' }}>
                   Histórico
                 </h3>
-                <select
-                  value={filtroDiaDirecionamento}
-                  onChange={(e) => { setFiltroDiaDirecionamento(e.target.value); carregarExecucoesDirecionamento(e.target.value); }}
-                  className="visor-input"
-                  style={{ marginBottom: '10px' }}
-                >
-                  <option value="">Todos os dias</option>
-                  {DIAS_ABA_DIRECIONAMENTO.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  <select
+                    value={filtroDiaDirecionamento}
+                    onChange={(e) => { setFiltroDiaDirecionamento(e.target.value); carregarExecucoesDirecionamento(e.target.value); }}
+                    className="visor-input"
+                    style={{ flex: 1, minWidth: '140px' }}
+                  >
+                    <option value="">Todos os dias</option>
+                    {DIAS_ABA_DIRECIONAMENTO.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Buscar data (ex: 29/09)"
+                    value={buscaHistoricoDirecionamento}
+                    onChange={(e) => setBuscaHistoricoDirecionamento(e.target.value)}
+                    className="visor-input"
+                    style={{ flex: 1, minWidth: '140px' }}
+                  />
+                </div>
 
                 {carregandoExecucoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
                 {!carregandoExecucoes && execucoesDirecionamento.length === 0 && (
                   <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma execução registrada ainda.</p>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {execucoesDirecionamento.map((exec) => (
-                    <div key={exec.id}>
-                      <div
-                        onClick={() => handleVerSessoesExecucao(exec.id)}
-                        className="visor-list-item"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div>
-                          <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px', color: '#1E1E1E' }}>
-                            {new Date(exec.data_hora_execucao).toLocaleString('pt-BR')} · {exec.tipo_execucao === 'MANUAL' ? 'Manual' : 'Automática'}
-                          </div>
-                          <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '11px', color: exec.status === 'SUCESSO' ? 'var(--visor-verde)' : exec.status === 'ERRO' ? 'var(--visor-vermelho)' : '#555', marginTop: '4px' }}>
-                            {exec.status === 'SUCESSO' && `✅ ${exec.total_sessoes} sessão(ões) — ${exec.aba_usada}`}
-                            {exec.status === 'ERRO' && `❌ ${exec.mensagem_erro}`}
-                            {exec.status === 'SEM_ABA_HOJE' && '⚠️ Sem aba nesse dia'}
-                          </div>
-                        </div>
-                        <span style={{ fontSize: '13px', color: '#555' }}>{execucaoAberta === exec.id ? '▼' : '▶'}</span>
-                      </div>
-                      {execucaoAberta === exec.id && (
-                        <div style={{ padding: '10px 4px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {carregandoSessoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
-                          {!carregandoSessoes && sessoesDaExecucao.length === 0 && (
-                            <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma sessão nessa execução.</p>
-                          )}
-                          {!carregandoSessoes && sessoesDaExecucao.map((s) => (
-                            <div key={s.id} className={`visor-direcionamento-card visor-direcionamento-card--${s.tipo === 'PISCINA' ? 'piscina' : 'referencia'}`}>
-                              <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · {s.tipo === 'PISCINA' ? 'Piscina' : 'Referência'}</span>
-                              {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
-                            </div>
-                          ))}
-                        </div>
+                {(() => {
+                  const buscaNormalizada = buscaHistoricoDirecionamento.trim();
+                  const execucoesFiltradas = buscaNormalizada
+                    ? execucoesDirecionamento.filter((exec) =>
+                        new Date(exec.data_hora_execucao).toLocaleDateString('pt-BR').includes(buscaNormalizada)
+                      )
+                    : execucoesDirecionamento;
+
+                  return (
+                    <>
+                      {!carregandoExecucoes && execucoesDirecionamento.length > 0 && execucoesFiltradas.length === 0 && (
+                        <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma execução encontrada com essa data.</p>
                       )}
-                    </div>
-                  ))}
-                </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {execucoesFiltradas.map((exec) => (
+                          <div key={exec.id} className="visor-list-item" style={{ gap: '10px' }}>
+                            <input
+                              type="checkbox"
+                              checked={selecionadosHistoricoDirecionamento.includes(exec.id)}
+                              onChange={() => toggleSelecaoExecucaoDirecionamento(exec.id)}
+                              style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                            />
+                            <div
+                              onClick={() => handleVerSessoesExecucao(exec.id)}
+                              style={{ flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
+                            >
+                              <div>
+                                <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px', color: '#1E1E1E' }}>
+                                  {new Date(exec.data_hora_execucao).toLocaleString('pt-BR')} · {exec.tipo_execucao === 'MANUAL' ? 'Manual' : 'Automática'}
+                                </div>
+                                <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '11px', color: exec.status === 'SUCESSO' ? 'var(--visor-verde)' : exec.status === 'ERRO' ? 'var(--visor-vermelho)' : '#555', marginTop: '4px' }}>
+                                  {exec.status === 'SUCESSO' && `✅ ${exec.total_sessoes} sessão(ões) — ${exec.aba_usada}`}
+                                  {exec.status === 'ERRO' && `❌ ${exec.mensagem_erro}`}
+                                  {exec.status === 'SEM_ABA_HOJE' && '⚠️ Sem aba nesse dia'}
+                                </div>
+                              </div>
+                              <span style={{ fontSize: '13px', color: '#555' }}>▶</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {selecionadosHistoricoDirecionamento.length > 0 && (
+                  <div style={{ marginTop: '12px' }}>
+                    {!confirmandoRemocaoHistoricoDirecionamento ? (
+                      <MinecraftButton
+                        className="mc-button--danger"
+                        onClick={() => setConfirmandoRemocaoHistoricoDirecionamento(true)}
+                      >
+                        Remover selecionadas ({selecionadosHistoricoDirecionamento.length})
+                      </MinecraftButton>
+                    ) : (
+                      <div style={{ background: '#FFF3D0', border: '2px solid var(--visor-amarelo-escuro)', borderRadius: '14px', padding: '10px' }}>
+                        <p style={{ fontSize: '12px', color: '#1E1E1E', margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                          ⚠️ Remover {selecionadosHistoricoDirecionamento.length} execução(ões) definitivamente? Essa ação não tem volta.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <MinecraftButton
+                            className="mc-button--danger"
+                            onClick={handleRemoverExecucoesSelecionadas}
+                            disabled={removendoHistoricoDirecionamento}
+                            style={{ width: 'auto', flexShrink: 0 }}
+                          >
+                            {removendoHistoricoDirecionamento ? 'Removendo...' : 'Sim, remover'}
+                          </MinecraftButton>
+                          <MinecraftButton
+                            onClick={() => setConfirmandoRemocaoHistoricoDirecionamento(false)}
+                            disabled={removendoHistoricoDirecionamento}
+                            style={{ width: 'auto', flexShrink: 0 }}
+                          >
+                            Cancelar
+                          </MinecraftButton>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
             </div>
           </MinecraftPanel>
+        </div>
+      )}
+
+      {/* Modal com as sessões de uma execução do histórico do Direcionamento */}
+      {execucaoAberta !== null && (
+        <div
+          onClick={handleFecharModalDirecionamento}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(5, 55, 98, 0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#FFFFFF', borderRadius: '20px', padding: '20px', width: '100%', maxWidth: '520px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '3px 3px 0 rgba(5, 55, 98, 0.2)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '16px', color: '#1E1E1E', margin: 0 }}>Sessões da execução</h3>
+              <button
+                onClick={handleFecharModalDirecionamento}
+                style={{ border: 'none', background: 'transparent', fontSize: '20px', cursor: 'pointer', color: '#1E1E1E', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Buscar aplicador ou assistido..."
+              value={buscaModalDirecionamento}
+              onChange={(e) => setBuscaModalDirecionamento(e.target.value)}
+              className="visor-input"
+              style={{ marginBottom: '12px' }}
+            />
+
+            {carregandoSessoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
+            {!carregandoSessoes && sessoesDaExecucao.length === 0 && (
+              <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma sessão nessa execução.</p>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {!carregandoSessoes && sessoesDaExecucao
+                .filter((s) => {
+                  const busca = normalizarTexto(buscaModalDirecionamento.trim());
+                  if (!busca) return true;
+                  return normalizarTexto(s.aplicador || '').includes(busca) || normalizarTexto(s.tita || '').includes(busca);
+                })
+                .map((s) => (
+                  <div key={s.id} className={`visor-direcionamento-card visor-direcionamento-card--${s.tipo === 'PISCINA' ? 'piscina' : 'referencia'}`}>
+                    <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · {s.tipo === 'PISCINA' ? 'Piscina' : 'Referência'}</span>
+                    {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       )}
 
