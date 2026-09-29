@@ -991,6 +991,20 @@ def direcionamento_listar_sessoes(execucao_id: int, usuario: dict = Depends(obte
     return {"sessoes": database.listar_sessoes_direcionamento(execucao_id)}
 
 
+@app.delete("/direcionamento/execucoes/lote", response_model=RemocaoLoteResponse)
+def direcionamento_remover_execucoes_em_lote(request: RemocaoLoteRequest, usuario: dict = Depends(obter_usuario_logado)):
+    """Remove definitivamente execuções do histórico do Registro de Referência/Piscina
+    (ex: limpar histórico antigo). As sessões de cada execução somem junto (cascade).
+    Restrito à coordenação."""
+    if usuario.get("papel") != "coordenacao":
+        raise HTTPException(status_code=403, detail="Apenas a coordenação pode remover esse histórico.")
+
+    removidos = database.remover_execucoes_direcionamento_em_lote(request.ids)
+    print(f"{DEBUG_TAG} Remoção em lote de execuções do Direcionamento: {removidos} (por {usuario.get('nome')})")
+
+    return RemocaoLoteResponse(removidos=removidos)
+
+
 @app.get("/debug/testar-direcionamento")
 def debug_testar_direcionamento():
     """

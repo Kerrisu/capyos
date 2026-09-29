@@ -574,6 +574,28 @@ def remover_relatos_aba_em_lote(ids: list[int]) -> int:
         conn.close()
 
 
+def remover_execucoes_direcionamento_em_lote(ids: list[int]) -> int:
+    """Remove definitivamente as execuções do Registro de Referência/Piscina
+    selecionadas pela coordenação (ex: limpar histórico antigo). As sessões
+    de cada execução somem junto por causa do ON DELETE CASCADE da tabela
+    sessoes_direcionamento. Retorna quantas execuções foram removidas."""
+    if not ids:
+        return 0
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM execucoes_direcionamento
+                WHERE id = ANY(%s);
+            """, (ids,))
+            linhas_removidas = cur.rowcount
+        conn.commit()
+        return linhas_removidas
+    finally:
+        conn.close()
+
+
 # --- GESTÃO DE USUÁRIOS/LOGINS ---
 
 class LoginJaExisteError(Exception):
