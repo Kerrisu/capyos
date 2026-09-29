@@ -819,6 +819,7 @@ export default function AppAplicadores() {
 
   // DIRECIONAMENTO: converte "2026-09-29" pra "29/09/2026"
   const isoParaDDMMAAAA = (dataIso) => {
+    if (!dataIso) return '??/??/????';
     const [ano, mes, dia] = dataIso.split('-');
     return `${dia}/${mes}/${ano}`;
   };
