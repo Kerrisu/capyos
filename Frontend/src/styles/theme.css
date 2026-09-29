@@ -418,6 +418,19 @@ body {
   gap: 12px;
   width: 100%;
 }
+.visor-conteudo {
+  max-width: 600px;
+}
+@media (min-width: 900px) {
+  .visor-conteudo {
+    max-width: 760px;
+  }
+}
+@media (min-width: 1200px) {
+  .visor-conteudo {
+    max-width: 960px;
+  }
+}
 @media (min-width: 700px) {
   .visor-home-layout {
     flex-direction: row;
