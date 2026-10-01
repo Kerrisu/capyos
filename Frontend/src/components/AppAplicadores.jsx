@@ -58,6 +58,7 @@ export default function AppAplicadores() {
   const [sessoesDaExecucao, setSessoesDaExecucao] = useState([]);
   const [carregandoSessoes, setCarregandoSessoes] = useState(false);
   const [copiadoDirecionamento, setCopiadoDirecionamento] = useState(false);
+  const [copiadoModalDirecionamento, setCopiadoModalDirecionamento] = useState(false);
   const [buscaHistoricoDirecionamento, setBuscaHistoricoDirecionamento] = useState('');
   const [buscaModalDirecionamento, setBuscaModalDirecionamento] = useState('');
   const [selecionadosHistoricoDirecionamento, setSelecionadosHistoricoDirecionamento] = useState([]);
@@ -849,11 +850,13 @@ export default function AppAplicadores() {
     }).join('\n');
   };
 
-  const handleCopiarSessoesDirecionamento = (sessoes) => {
+  const handleCopiarSessoesDirecionamento = (sessoes, setFlagCopiado = setCopiadoDirecionamento) => {
     const texto = formatarSessoesParaBulk(sessoes);
     navigator.clipboard.writeText(texto).then(() => {
-      setCopiadoDirecionamento(true);
-      setTimeout(() => setCopiadoDirecionamento(false), 1800);
+      setFlagCopiado(true);
+      setTimeout(() => setFlagCopiado(false), 1800);
+    }).catch((err) => {
+      console.error('Erro ao copiar sessões do Direcionamento:', err);
     });
   };
 
@@ -1108,7 +1111,7 @@ export default function AppAplicadores() {
       {/* Botão de voltar das telas finais (Lista de Titas, Cadastro em Massa,
           etc.) — as telas de Salas já têm o próprio botão embutido, então
           ficam de fora daqui */}
-      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes'].includes(tela) && (
+      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes', 'direcionamento'].includes(tela) && (
         <MinecraftButton onClick={() => setTela(TELA_PAI[tela] || 'home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
           ← Voltar
         </MinecraftButton>
@@ -1298,17 +1301,16 @@ export default function AppAplicadores() {
         <div style={{ width: '100%' }}>
           <h2 className="mc-title" style={{ fontSize: '22px', margin: '0 0 16px 0' }}>Registro de Referência/Piscina</h2>
 
-          <MinecraftPanel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="visor-direc-layout">
 
-              {/* Horário agendado */}
+            {/* ===== Painel da esquerda: Horário agendado + Leitura manual ===== */}
+            <div className="mc-panel visor-direc-coluna">
+
               <div className="visor-tita-group">
-                <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: '0 0 10px 0' }}>
-                  Horário agendado
-                </h3>
-                <p style={{ fontSize: '12px', color: '#333', margin: '0 0 10px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                  Todo dia, no horário abaixo, o sistema lê sozinho o Direcionamento real de hoje e registra quem precisou de referência ou foi pra piscina.
-                  {carregandoDirecionamentoConfig ? ' Carregando...' : direcionamentoHorario ? ` Configurado: ${direcionamentoHorario}.` : ' Ainda não configurado.'}
+                <h3 className="visor-direc-titulo">Horário Agendado</h3>
+                <p className="visor-direc-texto">
+                  Horário em que a leitura vai executar automaticamente.
+                  {carregandoDirecionamentoConfig ? ' Carregando...' : direcionamentoHorario ? ` Horário configurado: ${direcionamentoHorario}.` : ' Ainda não configurado.'}
                 </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <input
@@ -1323,7 +1325,7 @@ export default function AppAplicadores() {
                     disabled={salvandoDirecionamentoConfig || !direcionamentoHorarioInput.trim()}
                     style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}
                   >
-                    {salvandoDirecionamentoConfig ? 'Salvando...' : 'Salvar horário'}
+                    {salvandoDirecionamentoConfig ? 'Salvando...' : 'Salvar'}
                   </MinecraftButton>
                 </div>
                 {erroDirecionamentoConfig && (
@@ -1331,164 +1333,158 @@ export default function AppAplicadores() {
                 )}
               </div>
 
-              {/* Forçar execução manual */}
               <div className="visor-tita-group">
-                <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: '0 0 10px 0' }}>
-                  Forçar agora
-                </h3>
-                <p style={{ fontSize: '12px', color: '#333', margin: '0 0 10px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                  Roda a leitura na hora, sem esperar o horário agendado. Útil pra testar ou registrar de novo se algo mudou na planilha.
+                <h3 className="visor-direc-titulo">Leitura Manual</h3>
+                <p className="visor-direc-texto">
+                  Realiza a leitura do Direcionamento na hora e deixa as sessões formatadas, prontas pra colar no Cadastro em Massa.
                 </p>
                 <MinecraftButton onClick={handleForcarDirecionamento} disabled={executandoDirecionamento}>
-                  {executandoDirecionamento ? 'Rodando...' : 'Forçar agora'}
+                  {executandoDirecionamento ? 'Lendo...' : 'Ler agora'}
                 </MinecraftButton>
                 {erroDirecionamento && (
                   <p style={{ fontSize: '11px', color: 'var(--visor-vermelho)', margin: '10px 0 0 0' }}>🔴 {erroDirecionamento}</p>
                 )}
                 {resultadoDirecionamento && (
-                  <div style={{ marginTop: '10px' }}>
+                  <div style={{ marginTop: '12px' }}>
                     <p style={{ fontSize: '12px', color: resultadoDirecionamento.execucao.status === 'SUCESSO' ? 'var(--visor-verde)' : resultadoDirecionamento.execucao.status === 'ERRO' ? 'var(--visor-vermelho)' : '#555', fontWeight: 700, margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
                       {resultadoDirecionamento.execucao.status === 'SUCESSO' && `✅ ${resultadoDirecionamento.execucao.total_sessoes} sessão(ões) registrada(s) (aba ${resultadoDirecionamento.execucao.aba_usada}).`}
                       {resultadoDirecionamento.execucao.status === 'ERRO' && `❌ ${resultadoDirecionamento.execucao.mensagem_erro}`}
                       {resultadoDirecionamento.execucao.status === 'SEM_ABA_HOJE' && '⚠️ Hoje não tem aba correspondente no Direcionamento.'}
                     </p>
                     {resultadoDirecionamento.sessoes.length > 0 && (
-                      <>
-                        <p style={{ fontSize: '11px', color: '#333', margin: '0 0 6px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                          Pronto pra colar direto no Cadastro em Massa:
-                        </p>
-                        <textarea
-                          readOnly
-                          value={formatarSessoesParaBulk(resultadoDirecionamento.sessoes)}
-                          onFocus={(e) => e.target.select()}
-                          rows={6}
-                          className="visor-input"
-                          style={{ fontFamily: 'monospace', fontSize: '11px', resize: 'vertical', marginBottom: '8px' }}
-                        />
-                        <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(resultadoDirecionamento.sessoes)}>
-                          {copiadoDirecionamento ? '✅ Copiado!' : 'Copiar'}
-                        </MinecraftButton>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Histórico de execuções */}
-              <div className="visor-tita-group">
-                <h3 style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '15px', color: '#1E1E1E', margin: '0 0 10px 0' }}>
-                  Histórico
-                </h3>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  <select
-                    value={filtroDiaDirecionamento}
-                    onChange={(e) => { setFiltroDiaDirecionamento(e.target.value); carregarExecucoesDirecionamento(e.target.value); }}
-                    className="visor-input"
-                    style={{ flex: 1, minWidth: '140px' }}
-                  >
-                    <option value="">Todos os dias</option>
-                    {DIAS_ABA_DIRECIONAMENTO.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Buscar data (ex: 29/09)"
-                    value={buscaHistoricoDirecionamento}
-                    onChange={(e) => setBuscaHistoricoDirecionamento(e.target.value)}
-                    className="visor-input"
-                    style={{ flex: 1, minWidth: '140px' }}
-                  />
-                </div>
-
-                {carregandoExecucoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
-                {!carregandoExecucoes && execucoesDirecionamento.length === 0 && (
-                  <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma execução registrada ainda.</p>
-                )}
-
-                {(() => {
-                  const buscaNormalizada = buscaHistoricoDirecionamento.trim();
-                  const execucoesFiltradas = buscaNormalizada
-                    ? execucoesDirecionamento.filter((exec) =>
-                        new Date(exec.data_hora_execucao).toLocaleDateString('pt-BR').includes(buscaNormalizada)
-                      )
-                    : execucoesDirecionamento;
-
-                  return (
-                    <>
-                      {!carregandoExecucoes && execucoesDirecionamento.length > 0 && execucoesFiltradas.length === 0 && (
-                        <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma execução encontrada com essa data.</p>
-                      )}
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {execucoesFiltradas.map((exec) => (
-                          <div key={exec.id} className="visor-list-item" style={{ gap: '10px' }}>
-                            <input
-                              type="checkbox"
-                              checked={selecionadosHistoricoDirecionamento.includes(exec.id)}
-                              onChange={() => toggleSelecaoExecucaoDirecionamento(exec.id)}
-                              style={{ width: '16px', height: '16px', flexShrink: 0 }}
-                            />
-                            <div
-                              onClick={() => handleVerSessoesExecucao(exec.id)}
-                              style={{ flex: 1, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
-                            >
-                              <div>
-                                <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px', color: '#1E1E1E' }}>
-                                  {new Date(exec.data_hora_execucao).toLocaleString('pt-BR')} · {exec.tipo_execucao === 'MANUAL' ? 'Manual' : 'Automática'}
-                                </div>
-                                <div style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '11px', color: exec.status === 'SUCESSO' ? 'var(--visor-verde)' : exec.status === 'ERRO' ? 'var(--visor-vermelho)' : '#555', marginTop: '4px' }}>
-                                  {exec.status === 'SUCESSO' && `✅ ${exec.total_sessoes} sessão(ões) — ${exec.aba_usada}`}
-                                  {exec.status === 'ERRO' && `❌ ${exec.mensagem_erro}`}
-                                  {exec.status === 'SEM_ABA_HOJE' && '⚠️ Sem aba nesse dia'}
-                                </div>
-                              </div>
-                              <span style={{ fontSize: '13px', color: '#555' }}>▶</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {selecionadosHistoricoDirecionamento.length > 0 && (
-                  <div style={{ marginTop: '12px' }}>
-                    {!confirmandoRemocaoHistoricoDirecionamento ? (
-                      <MinecraftButton
-                        className="mc-button--danger"
-                        onClick={() => setConfirmandoRemocaoHistoricoDirecionamento(true)}
-                      >
-                        Remover selecionadas ({selecionadosHistoricoDirecionamento.length})
+                      <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(resultadoDirecionamento.sessoes)}>
+                        {copiadoDirecionamento ? '✅ Copiado!' : 'Copiar sessões'}
                       </MinecraftButton>
-                    ) : (
-                      <div style={{ background: '#FFF3D0', border: '2px solid var(--visor-amarelo-escuro)', borderRadius: '14px', padding: '10px' }}>
-                        <p style={{ fontSize: '12px', color: '#1E1E1E', margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                          ⚠️ Remover {selecionadosHistoricoDirecionamento.length} execução(ões) definitivamente? Essa ação não tem volta.
-                        </p>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <MinecraftButton
-                            className="mc-button--danger"
-                            onClick={handleRemoverExecucoesSelecionadas}
-                            disabled={removendoHistoricoDirecionamento}
-                            style={{ width: 'auto', flexShrink: 0 }}
-                          >
-                            {removendoHistoricoDirecionamento ? 'Removendo...' : 'Sim, remover'}
-                          </MinecraftButton>
-                          <MinecraftButton
-                            onClick={() => setConfirmandoRemocaoHistoricoDirecionamento(false)}
-                            disabled={removendoHistoricoDirecionamento}
-                            style={{ width: 'auto', flexShrink: 0 }}
-                          >
-                            Cancelar
-                          </MinecraftButton>
-                        </div>
-                      </div>
                     )}
                   </div>
                 )}
               </div>
 
             </div>
-          </MinecraftPanel>
+
+            {/* ===== Painel da direita: Histórico ===== */}
+            <div className="mc-panel visor-direc-coluna">
+
+              <div className="visor-tita-group">
+                <h3 className="visor-direc-titulo">Histórico</h3>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar data (ex: 29/09)"
+                    value={buscaHistoricoDirecionamento}
+                    onChange={(e) => setBuscaHistoricoDirecionamento(e.target.value)}
+                    className="visor-input visor-input--pill"
+                    style={{ flex: 1, minWidth: '140px' }}
+                  />
+                  <select
+                    value={filtroDiaDirecionamento}
+                    onChange={(e) => { setFiltroDiaDirecionamento(e.target.value); carregarExecucoesDirecionamento(e.target.value); }}
+                    className="visor-input visor-input--pill"
+                    style={{ flex: 1, minWidth: '140px' }}
+                  >
+                    <option value="">Todos os dias</option>
+                    {DIAS_ABA_DIRECIONAMENTO.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {carregandoExecucoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
+              {!carregandoExecucoes && execucoesDirecionamento.length === 0 && (
+                <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma execução registrada ainda.</p>
+              )}
+
+              {(() => {
+                const buscaNormalizada = buscaHistoricoDirecionamento.trim();
+                const execucoesFiltradas = buscaNormalizada
+                  ? execucoesDirecionamento.filter((exec) =>
+                      new Date(exec.data_hora_execucao).toLocaleDateString('pt-BR').includes(buscaNormalizada)
+                    )
+                  : execucoesDirecionamento;
+
+                return (
+                  <>
+                    {!carregandoExecucoes && execucoesDirecionamento.length > 0 && execucoesFiltradas.length === 0 && (
+                      <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Nenhuma execução encontrada com essa data.</p>
+                    )}
+
+                    <div className="visor-exec-grid">
+                      {execucoesFiltradas.map((exec) => (
+                        <div key={exec.id} className="visor-exec-card">
+                          <input
+                            type="checkbox"
+                            checked={selecionadosHistoricoDirecionamento.includes(exec.id)}
+                            onChange={() => toggleSelecaoExecucaoDirecionamento(exec.id)}
+                            style={{ width: '16px', height: '16px', flexShrink: 0 }}
+                          />
+                          <div
+                            onClick={() => handleVerSessoesExecucao(exec.id)}
+                            style={{ flex: 1, cursor: 'pointer', textAlign: 'center' }}
+                          >
+                            <div style={{ fontSize: '13px', color: '#1E1E1E' }}>
+                              {new Date(exec.data_hora_execucao).toLocaleString('pt-BR')} · {exec.tipo_execucao === 'MANUAL' ? 'Manual' : 'Automática'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: exec.status === 'SUCESSO' ? 'var(--visor-verde)' : exec.status === 'ERRO' ? 'var(--visor-vermelho)' : '#555', marginTop: '4px' }}>
+                              {exec.status === 'SUCESSO' && `✅ ${exec.total_sessoes} sessão(ões) — ${exec.aba_usada}`}
+                              {exec.status === 'ERRO' && `❌ ${exec.mensagem_erro}`}
+                              {exec.status === 'SEM_ABA_HOJE' && '⚠️ Sem aba nesse dia'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+
+              {selecionadosHistoricoDirecionamento.length > 0 && (
+                <div style={{ marginTop: '14px' }}>
+                  {!confirmandoRemocaoHistoricoDirecionamento ? (
+                    <MinecraftButton
+                      className="mc-button--danger"
+                      onClick={() => setConfirmandoRemocaoHistoricoDirecionamento(true)}
+                    >
+                      Remover selecionadas ({selecionadosHistoricoDirecionamento.length})
+                    </MinecraftButton>
+                  ) : (
+                    <div style={{ background: '#FFF3D0', border: '2px solid var(--visor-amarelo-escuro)', borderRadius: '14px', padding: '10px' }}>
+                      <p style={{ fontSize: '12px', color: '#1E1E1E', margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                        ⚠️ Remover {selecionadosHistoricoDirecionamento.length} execução(ões) definitivamente? Essa ação não tem volta.
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <MinecraftButton
+                          className="mc-button--danger"
+                          onClick={handleRemoverExecucoesSelecionadas}
+                          disabled={removendoHistoricoDirecionamento}
+                          style={{ width: 'auto', flexShrink: 0 }}
+                        >
+                          {removendoHistoricoDirecionamento ? 'Removendo...' : 'Sim, remover'}
+                        </MinecraftButton>
+                        <MinecraftButton
+                          onClick={() => setConfirmandoRemocaoHistoricoDirecionamento(false)}
+                          disabled={removendoHistoricoDirecionamento}
+                          style={{ width: 'auto', flexShrink: 0 }}
+                        >
+                          Cancelar
+                        </MinecraftButton>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {/* Voltar em pílula, igual ao design */}
+          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+            <MinecraftButton
+              onClick={() => setTela(TELA_PAI['direcionamento'])}
+              className="mc-button--claro"
+              style={{ width: '100%', maxWidth: '360px' }}
+            >
+              Voltar
+            </MinecraftButton>
+          </div>
         </div>
       )}
 
@@ -1518,8 +1514,16 @@ export default function AppAplicadores() {
               value={buscaModalDirecionamento}
               onChange={(e) => setBuscaModalDirecionamento(e.target.value)}
               className="visor-input"
-              style={{ marginBottom: '12px' }}
+              style={{ marginBottom: '10px' }}
             />
+
+            {!carregandoSessoes && sessoesDaExecucao.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(sessoesDaExecucao, setCopiadoModalDirecionamento)}>
+                  {copiadoModalDirecionamento ? '✅ Copiado!' : `Copiar todas (${sessoesDaExecucao.length})`}
+                </MinecraftButton>
+              </div>
+            )}
 
             {carregandoSessoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
             {!carregandoSessoes && sessoesDaExecucao.length === 0 && (
