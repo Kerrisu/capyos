@@ -702,3 +702,64 @@ body {
   background: #F4F6F8;
   border: 2px solid #E2E6EA;
 }
+
+/* ================================================== */
+/* Registro de Referência/Piscina — layout do design do Ken (30/09/2026):
+   dois painéis brancos lado a lado no desktop, empilhados no celular. */
+/* ================================================== */
+.visor-direc-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+.visor-direc-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .visor-direc-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    align-items: start;
+  }
+}
+.visor-direc-titulo {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  color: #1E1E1E;
+  margin: 0 0 10px 0;
+}
+.visor-direc-texto {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+.visor-input--pill {
+  border-radius: 999px;
+  padding: 12px 18px;
+}
+.visor-exec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.visor-exec-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 999px;
+  background: #D9DEE3;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.mc-button--claro {
+  background: #FFFFFF;
+  color: var(--visor-navy);
+}
+.mc-button--claro:hover:not(.mc-button--disabled) {
+  background: #E8EEF3;
+}
