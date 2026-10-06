@@ -664,6 +664,26 @@ body {
 .visor-direcionamento-card--piscina {
   background: linear-gradient(135deg, #A3DBFF, #4FA3E3);
 }
+.visor-direcionamento-card--oficina {
+  background: linear-gradient(135deg, #053762, #1B6CA8);
+  color: #FFFFFF;
+}
+/* Duplicadas ("!") agrupadas por tita+horário, no topo da lista do modal */
+.visor-direcionamento-grupo-conflito {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 20px;
+  background: rgba(242, 18, 20, 0.10);
+}
+.visor-direcionamento-rotulo {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E1E1E;
+  margin: 4px 0 0 0;
+}
 .visor-direcionamento-conflito {
   flex-shrink: 0;
   background: var(--visor-vermelho);
