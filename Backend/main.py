@@ -850,13 +850,34 @@ def remover_relatos_aba_em_lote_rota(request: RemocaoLoteRequest, usuario: dict 
 # REGISTRO DE REFERÊNCIA/PISCINA (à parte do Cadastro em Massa, só coordenação)
 # ==========================================
 
-def _executar_leitura_direcionamento(tipo_execucao: str) -> dict:
+def _data_da_proxima_ocorrencia_da_aba(nome_aba: str, hoje):
     """
-    Núcleo compartilhado pelo botão "Forçar" (MANUAL) e pelo tick do
-    agendamento (AUTOMATICA). Lê o Direcionamento real de hoje, classifica
+    Pra leitura manual com aba escolhida: devolve a data do próximo dia da
+    semana correspondente àquela aba, contando a partir de hoje (se a aba
+    escolhida for a de hoje, é hoje mesmo).
+    """
+    for indice, nome in NOME_ABA_DIRECIONAMENTO_POR_DIA_SEMANA.items():
+        if nome == nome_aba:
+            dias_ate = (indice - hoje.weekday()) % 7
+            return hoje + timedelta(days=dias_ate)
+    return None
+
+
+def _executar_leitura_direcionamento(tipo_execucao: str, aba_escolhida: Optional[str] = None) -> dict:
+    """
+    Núcleo compartilhado pelo botão "Ler agora" (MANUAL) e pelo tick do
+    agendamento (AUTOMATICA). Lê o Direcionamento real, classifica
     REFERÊNCIA/PISCINA e salva tudo (execução + sessões) no banco.
+    Por padrão lê a aba de hoje; na leitura manual dá pra escolher outra
+    aba (aba_escolhida) — nesse caso a data das sessões é a da próxima
+    ocorrência daquele dia da semana (hoje, se for o mesmo dia).
     """
     nome_aba, hoje = _nome_aba_direcionamento_hoje()
+    if aba_escolhida:
+        data_aba = _data_da_proxima_ocorrencia_da_aba(aba_escolhida, hoje)
+        if data_aba is None:
+            raise HTTPException(status_code=400, detail=f"Aba '{aba_escolhida}' inválida.")
+        nome_aba, hoje = aba_escolhida, data_aba
     dia_semana_pt = DIAS_SEMANA_PT[hoje.weekday()]
 
     if not nome_aba:
@@ -919,13 +940,19 @@ def _executar_leitura_direcionamento(tipo_execucao: str) -> dict:
     return {"execucao": execucao, "sessoes": resultado}
 
 
+class ExecutarDirecionamentoRequest(BaseModel):
+    aba: Optional[str] = None  # ex: "QUARTA"; vazio = aba de hoje
+
+
 @app.post("/direcionamento/executar")
-def direcionamento_executar(usuario: dict = Depends(obter_usuario_logado)):
-    """Roda a leitura do Direcionamento AGORA (botão 'Forçar'). Restrito à coordenação."""
+def direcionamento_executar(request: Optional[ExecutarDirecionamentoRequest] = None, usuario: dict = Depends(obter_usuario_logado)):
+    """Roda a leitura do Direcionamento AGORA (botão 'Ler agora'). Restrito à coordenação.
+    Opcionalmente recebe a aba a ser lida; sem aba, lê a de hoje."""
     if usuario.get("papel") != "coordenacao":
         raise HTTPException(status_code=403, detail="Apenas a coordenação pode forçar o registro.")
 
-    resultado = _executar_leitura_direcionamento("MANUAL")
+    aba = request.aba if request and request.aba else None
+    resultado = _executar_leitura_direcionamento("MANUAL", aba_escolhida=aba)
     return resultado
 
 
@@ -946,6 +973,13 @@ def direcionamento_tick(chave: str):
 
     agora_recife = datetime.now(FUSO_RECIFE)
     hoje = agora_recife.date()
+
+    # Sábado/domingo não têm aba no Direcionamento: não tem o que ler e
+    # NÃO pode gravar execução (antes gravava um "SEM_ABA_HOJE" a cada tick,
+    # porque ja_rodou_automatico_hoje só conta SUCESSO e a leitura nunca
+    # chegava a ter sucesso nesses dias).
+    if hoje.weekday() not in NOME_ABA_DIRECIONAMENTO_POR_DIA_SEMANA:
+        return {"executado": False, "motivo": "Fim de semana: não tem aba no Direcionamento."}
 
     if agora_recife.strftime("%H:%M") < horario_configurado:
         return {"executado": False, "motivo": f"Ainda não bateu {horario_configurado} (agora são {agora_recife.strftime('%H:%M')})."}
