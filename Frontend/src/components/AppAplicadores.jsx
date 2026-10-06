@@ -59,6 +59,8 @@ export default function AppAplicadores() {
   const [carregandoSessoes, setCarregandoSessoes] = useState(false);
   const [copiadoDirecionamento, setCopiadoDirecionamento] = useState(false);
   const [copiadoModalDirecionamento, setCopiadoModalDirecionamento] = useState(false);
+  const [copiadoOficinasDirecionamento, setCopiadoOficinasDirecionamento] = useState(false);
+  const [copiadoModalOficinasDirecionamento, setCopiadoModalOficinasDirecionamento] = useState(false);
   const [abaManualDirecionamento, setAbaManualDirecionamento] = useState(''); // '' = aba de hoje
   const [buscaHistoricoDirecionamento, setBuscaHistoricoDirecionamento] = useState('');
   const [buscaModalDirecionamento, setBuscaModalDirecionamento] = useState('');
@@ -827,21 +829,64 @@ export default function AppAplicadores() {
     return `${dia}/${mes}/${ano}`;
   };
 
+  // DIRECIONAMENTO — OFICINA (pedido do Ken em 06/10/2026): o Direcionamento
+  // às vezes tem oficinas. O backend devolve essas linhas com tipo "OFICINA"
+  // (detectadas pelo texto, não pela cor). Elas NÃO entram na cópia normal:
+  // têm cópia separada, porque o destino delas é decidido na mão.
+  const ehOficinaDirecionamento = (s) => s.tipo === 'OFICINA';
+
+  // "Aplicador na oficina": a tita é o próprio texto da célula (ex:
+  // "OFICINA CINEMA"). Senão é participante, e o aplicador vem com o nome da
+  // oficina (cabeçalho da coluna, ex: "OFICINA 16:15").
+  const ehAplicadorNaOficina = (s) => normalizarTexto(s.tita || '').includes('oficina');
+  const nomeDaOficina = (s) => (ehAplicadorNaOficina(s) ? s.tita : s.aplicador) || 'OFICINA';
+
+  // Duplicadas ("!", mesma tita/horário com aplicadores diferentes) vão pro
+  // topo e ficam JUNTAS por tita+horário, pra quem vai resolver ver tudo de
+  // uma vez. O resto mantém a ordem original (horário, aplicador).
+  const separarSessoesDirecionamento = (sessoes) => {
+    const oficinas = sessoes.filter(ehOficinaDirecionamento);
+    const normais = sessoes.filter((s) => !ehOficinaDirecionamento(s));
+    const gruposPorChave = {};
+    normais.filter((s) => s.conflito).forEach((s) => {
+      const chave = `${s.data_referencia}|${s.horario}|${s.tita}`;
+      (gruposPorChave[chave] = gruposPorChave[chave] || []).push(s);
+    });
+    const conflitos = Object.keys(gruposPorChave).sort().map((k) => gruposPorChave[k]);
+    const demais = normais.filter((s) => !s.conflito);
+    return {
+      oficinas,
+      conflitos,                                  // array de grupos (cada grupo = array de sessões)
+      demais,                                     // normais sem conflito
+      normaisOrdenadas: [...conflitos.flat(), ...demais],
+    };
+  };
+
+  // Resultado da Leitura Manual já separado (usado pra mensagem e botões)
+  const resultadoDirecionamentoSeparado = resultadoDirecionamento
+    ? separarSessoesDirecionamento(resultadoDirecionamento.sessoes || [])
+    : null;
+
   // DIRECIONAMENTO: monta o texto pronto pra colar no Cadastro em Massa
   // (DATA;HORARIO;TITA;APLICADOR;OBSERVACAO). Referência e Piscina entram
   // juntas, sem distinção — pro Titas as duas são sessão normal. Sessões
   // com conflito (mesma tita/horário com aplicador diferente na planilha)
   // ganham uma observação avisando quem mais aparece, pra checar na mão.
-  const formatarSessoesParaBulk = (sessoes) => {
+  // Oficina: a observação é o nome da oficina. "todas" é a lista completa da
+  // execução (o conflito pode envolver uma linha de oficina, que não está em
+  // "sessoes" quando a cópia é só das normais).
+  const formatarSessoesParaBulk = (sessoes, todas = sessoes) => {
     const grupos = {};
-    sessoes.forEach((s) => {
+    todas.forEach((s) => {
       const chave = `${s.data_referencia}|${s.horario}|${s.tita}`;
       (grupos[chave] = grupos[chave] || []).push(s);
     });
 
     return sessoes.map((s) => {
       let observacao = '';
-      if (s.conflito) {
+      if (ehOficinaDirecionamento(s)) {
+        observacao = nomeDaOficina(s);
+      } else if (s.conflito) {
         const chave = `${s.data_referencia}|${s.horario}|${s.tita}`;
         const outros = [...new Set(grupos[chave].filter((x) => x.aplicador !== s.aplicador).map((x) => x.aplicador))];
         observacao = outros.length > 0
@@ -852,14 +897,34 @@ export default function AppAplicadores() {
     }).join('\n');
   };
 
-  const handleCopiarSessoesDirecionamento = (sessoes, setFlagCopiado = setCopiadoDirecionamento) => {
-    const texto = formatarSessoesParaBulk(sessoes);
+  // Copia as sessões normais (conflitos no topo, agrupados) ou, com
+  // apenasOficinas = true, só as oficinas.
+  const handleCopiarSessoesDirecionamento = (sessoes, setFlagCopiado = setCopiadoDirecionamento, apenasOficinas = false) => {
+    const { oficinas, normaisOrdenadas } = separarSessoesDirecionamento(sessoes);
+    const texto = formatarSessoesParaBulk(apenasOficinas ? oficinas : normaisOrdenadas, sessoes);
     navigator.clipboard.writeText(texto).then(() => {
       setFlagCopiado(true);
       setTimeout(() => setFlagCopiado(false), 1800);
     }).catch((err) => {
       console.error('Erro ao copiar sessões do Direcionamento:', err);
     });
+  };
+
+  // Card de uma sessão no modal do histórico
+  const renderCardSessaoDirecionamento = (s) => {
+    const classe = s.tipo === 'PISCINA' ? 'piscina' : ehOficinaDirecionamento(s) ? 'oficina' : 'referencia';
+    return (
+      <div key={s.id} className={`visor-direcionamento-card visor-direcionamento-card--${classe}`}>
+        {ehOficinaDirecionamento(s) ? (
+          ehAplicadorNaOficina(s)
+            ? <span>{s.horario} — <strong>{s.aplicador}</strong> na {s.tita} · Oficina</span>
+            : <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · Oficina</span>
+        ) : (
+          <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · {s.tipo === 'PISCINA' ? 'Piscina' : 'Referência'}</span>
+        )}
+        {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
+      </div>
+    );
   };
 
   const pendenciasParaAprovacao = pendencias.filter(p => p.feito);
@@ -1364,14 +1429,31 @@ export default function AppAplicadores() {
                 {resultadoDirecionamento && (
                   <div style={{ marginTop: '12px' }}>
                     <p style={{ fontSize: '12px', color: resultadoDirecionamento.execucao.status === 'SUCESSO' ? 'var(--visor-verde)' : resultadoDirecionamento.execucao.status === 'ERRO' ? 'var(--visor-vermelho)' : '#555', fontWeight: 700, margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                      {resultadoDirecionamento.execucao.status === 'SUCESSO' && `✅ ${resultadoDirecionamento.execucao.total_sessoes} sessão(ões) registrada(s) (aba ${resultadoDirecionamento.execucao.aba_usada}).`}
+                      {resultadoDirecionamento.execucao.status === 'SUCESSO' && `✅ ${resultadoDirecionamentoSeparado.normaisOrdenadas.length} sessão(ões) registrada(s) (aba ${resultadoDirecionamento.execucao.aba_usada}).`}
                       {resultadoDirecionamento.execucao.status === 'ERRO' && `❌ ${resultadoDirecionamento.execucao.mensagem_erro}`}
                       {resultadoDirecionamento.execucao.status === 'SEM_ABA_HOJE' && '⚠️ Hoje não tem aba correspondente no Direcionamento.'}
                     </p>
+                    {resultadoDirecionamentoSeparado.oficinas.length > 0 && (
+                      <p style={{ fontSize: '12px', color: '#555', fontWeight: 700, margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                        📌 {resultadoDirecionamentoSeparado.oficinas.length} registro(s) de oficina — cópia separada, o destino é decidido na mão.
+                      </p>
+                    )}
                     {resultadoDirecionamento.sessoes.length > 0 && (
-                      <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(resultadoDirecionamento.sessoes)}>
-                        {copiadoDirecionamento ? '✅ Copiado!' : 'Copiar sessões'}
-                      </MinecraftButton>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {resultadoDirecionamentoSeparado.normaisOrdenadas.length > 0 && (
+                          <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(resultadoDirecionamento.sessoes)}>
+                            {copiadoDirecionamento ? '✅ Copiado!' : 'Copiar sessões'}
+                          </MinecraftButton>
+                        )}
+                        {resultadoDirecionamentoSeparado.oficinas.length > 0 && (
+                          <MinecraftButton
+                            className="mc-button--atencao"
+                            onClick={() => handleCopiarSessoesDirecionamento(resultadoDirecionamento.sessoes, setCopiadoOficinasDirecionamento, true)}
+                          >
+                            {copiadoOficinasDirecionamento ? '✅ Copiado!' : `Copiar oficinas (${resultadoDirecionamentoSeparado.oficinas.length})`}
+                          </MinecraftButton>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -1534,13 +1616,26 @@ export default function AppAplicadores() {
               style={{ marginBottom: '10px' }}
             />
 
-            {!carregandoSessoes && sessoesDaExecucao.length > 0 && (
-              <div style={{ marginBottom: '12px' }}>
-                <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(sessoesDaExecucao, setCopiadoModalDirecionamento)}>
-                  {copiadoModalDirecionamento ? '✅ Copiado!' : `Copiar todas (${sessoesDaExecucao.length})`}
-                </MinecraftButton>
-              </div>
-            )}
+            {!carregandoSessoes && sessoesDaExecucao.length > 0 && (() => {
+              const { oficinas, normaisOrdenadas } = separarSessoesDirecionamento(sessoesDaExecucao);
+              return (
+                <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {normaisOrdenadas.length > 0 && (
+                    <MinecraftButton onClick={() => handleCopiarSessoesDirecionamento(sessoesDaExecucao, setCopiadoModalDirecionamento)}>
+                      {copiadoModalDirecionamento ? '✅ Copiado!' : `Copiar sessões (${normaisOrdenadas.length})`}
+                    </MinecraftButton>
+                  )}
+                  {oficinas.length > 0 && (
+                    <MinecraftButton
+                      className="mc-button--atencao"
+                      onClick={() => handleCopiarSessoesDirecionamento(sessoesDaExecucao, setCopiadoModalOficinasDirecionamento, true)}
+                    >
+                      {copiadoModalOficinasDirecionamento ? '✅ Copiado!' : `Copiar oficinas (${oficinas.length})`}
+                    </MinecraftButton>
+                  )}
+                </div>
+              );
+            })()}
 
             {carregandoSessoes && <p style={{ fontSize: '11px', color: '#555', textAlign: 'center' }}>Carregando...</p>}
             {!carregandoSessoes && sessoesDaExecucao.length === 0 && (
@@ -1548,18 +1643,43 @@ export default function AppAplicadores() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {!carregandoSessoes && sessoesDaExecucao
-                .filter((s) => {
-                  const busca = normalizarTexto(buscaModalDirecionamento.trim());
+              {!carregandoSessoes && (() => {
+                const busca = normalizarTexto(buscaModalDirecionamento.trim());
+                const filtradas = sessoesDaExecucao.filter((s) => {
                   if (!busca) return true;
                   return normalizarTexto(s.aplicador || '').includes(busca) || normalizarTexto(s.tita || '').includes(busca);
-                })
-                .map((s) => (
-                  <div key={s.id} className={`visor-direcionamento-card visor-direcionamento-card--${s.tipo === 'PISCINA' ? 'piscina' : 'referencia'}`}>
-                    <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · {s.tipo === 'PISCINA' ? 'Piscina' : 'Referência'}</span>
-                    {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
-                  </div>
-                ))}
+                });
+                const { conflitos, demais, oficinas } = separarSessoesDirecionamento(filtradas);
+                const qtdConflitos = conflitos.flat().length;
+                // Rótulos só aparecem quando há mais de uma seção na lista
+                const mostrarRotulos = [qtdConflitos > 0, demais.length > 0, oficinas.length > 0].filter(Boolean).length > 1;
+                return (
+                  <>
+                    {qtdConflitos > 0 && (
+                      <>
+                        {mostrarRotulos && <p className="visor-direcionamento-rotulo">⚠️ Duplicadas — conferir ({qtdConflitos})</p>}
+                        {conflitos.map((grupo) => (
+                          <div key={`${grupo[0].horario}|${grupo[0].tita}`} className="visor-direcionamento-grupo-conflito">
+                            {grupo.map(renderCardSessaoDirecionamento)}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {demais.length > 0 && (
+                      <>
+                        {mostrarRotulos && <p className="visor-direcionamento-rotulo">Sessões ({demais.length})</p>}
+                        {demais.map(renderCardSessaoDirecionamento)}
+                      </>
+                    )}
+                    {oficinas.length > 0 && (
+                      <>
+                        {mostrarRotulos && <p className="visor-direcionamento-rotulo">Oficinas ({oficinas.length})</p>}
+                        {oficinas.map(renderCardSessaoDirecionamento)}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
