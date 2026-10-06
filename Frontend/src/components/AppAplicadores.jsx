@@ -59,6 +59,7 @@ export default function AppAplicadores() {
   const [carregandoSessoes, setCarregandoSessoes] = useState(false);
   const [copiadoDirecionamento, setCopiadoDirecionamento] = useState(false);
   const [copiadoModalDirecionamento, setCopiadoModalDirecionamento] = useState(false);
+  const [abaManualDirecionamento, setAbaManualDirecionamento] = useState(''); // '' = aba de hoje
   const [buscaHistoricoDirecionamento, setBuscaHistoricoDirecionamento] = useState('');
   const [buscaModalDirecionamento, setBuscaModalDirecionamento] = useState('');
   const [selecionadosHistoricoDirecionamento, setSelecionadosHistoricoDirecionamento] = useState([]);
@@ -330,7 +331,8 @@ export default function AppAplicadores() {
     try {
       const response = await fetch(`${API_URL}/direcionamento/executar`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aba: abaManualDirecionamento || null })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Erro ao forçar o registro');
@@ -1338,9 +1340,24 @@ export default function AppAplicadores() {
                 <p className="visor-direc-texto">
                   Realiza a leitura do Direcionamento na hora e deixa as sessões formatadas, prontas pra colar no Cadastro em Massa.
                 </p>
-                <MinecraftButton onClick={handleForcarDirecionamento} disabled={executandoDirecionamento}>
-                  {executandoDirecionamento ? 'Lendo...' : 'Ler agora'}
-                </MinecraftButton>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <select
+                    value={abaManualDirecionamento}
+                    onChange={(e) => setAbaManualDirecionamento(e.target.value)}
+                    className="visor-input visor-input--pill"
+                    style={{ flex: 1, minWidth: '140px' }}
+                  >
+                    <option value="">Aba de hoje</option>
+                    {DIAS_ABA_DIRECIONAMENTO.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <MinecraftButton
+                    onClick={handleForcarDirecionamento}
+                    disabled={executandoDirecionamento}
+                    style={{ width: 'auto', flexShrink: 0, whiteSpace: 'nowrap' }}
+                  >
+                    {executandoDirecionamento ? 'Lendo...' : 'Ler agora'}
+                  </MinecraftButton>
+                </div>
                 {erroDirecionamento && (
                   <p style={{ fontSize: '11px', color: 'var(--visor-vermelho)', margin: '10px 0 0 0' }}>🔴 {erroDirecionamento}</p>
                 )}
