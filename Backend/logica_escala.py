@@ -518,6 +518,20 @@ def ler_referencia_e_piscina(url_planilha, nome_aba):
     processar_escala usa) e devolve só as sessões de REFERÊNCIA e PISCINA,
     com tita/horário/aplicador — ignorando SUPRIDA de propósito, porque o
     foco aqui é registrar quem precisou de tita, não quem foi suprido.
+
+    OFICINA (pedido do Ken em 06/10/2026): às vezes o Direcionamento tem
+    oficinas. Elas são detectadas pelo TEXTO "OFICINA" (a cor varia: laranja,
+    vinho, até verde) e viram um terceiro tipo de sessão, "OFICINA", pra
+    ninguém ser lido como "assistido OFICINA CINEMA" nem como "aplicador
+    OFICINA 16:15". Dois formatos:
+      - Célula escrita OFICINA na coluna de um aplicador (ele está na
+        oficina naquele horário): tita = texto da célula, aplicador = o
+        aplicador da coluna.
+      - Coluna cujo cabeçalho é OFICINA (ex: "OFICINA 16:15"): os assistidos
+        verdes/piscina embaixo são participantes: tita = assistido,
+        aplicador = nome da oficina (cabeçalho da coluna).
+    Oficina nunca é marcada como conflito — o destino dessas sessões é
+    decidido na mão.
     Mesmo shape de retorno que processar_escala: lista de dicts em caso de
     sucesso, ou uma string com a mensagem de erro em caso de falha.
     """
@@ -597,6 +611,22 @@ def ler_referencia_e_piscina(url_planilha, nome_aba):
                 is_verde = _cor_bate(r, g, b, COR_VERDE) or _cor_bate(r, g, b, COR_REFERENCIA_TRANSFERIDO)
                 is_piscina = _cor_bate(r, g, b, COR_PISCINA)
 
+                # OFICINA: detectada pelo texto (célula ou cabeçalho da coluna),
+                # nunca pela cor. Ver docstring da função.
+                celula_e_oficina = "OFICINA" in _normalizar(nome_limpo)
+                coluna_e_oficina = "OFICINA" in _normalizar(aplicador_atual or "")
+
+                if celula_e_oficina or (coluna_e_oficina and (is_verde or is_piscina)):
+                    sessoes_encontradas.append({
+                        "tita": nome_limpo,
+                        "horario": texto_coluna_a + "H",
+                        "tipo": "OFICINA",
+                        "aplicador": aplicador_atual,
+                        "conflito": False,
+                    })
+                    registrados.add(chave_unica)
+                    continue
+
                 if is_verde or is_piscina:
                     sessoes_encontradas.append({
                         "tita": nome_limpo,
@@ -613,11 +643,22 @@ def ler_referencia_e_piscina(url_planilha, nome_aba):
         # vez com aplicadores diferentes — sinal de erro de preenchimento na
         # planilha. Quem for consolidar o registro no Cadastro em Massa decide
         # manualmente quem foi a referência de verdade.
+        # Oficina: um assistido que aparece como participante de oficina E em
+        # sessão normal no mesmo horário continua contando como duplicado (o
+        # "!" cai na sessão normal, e o front mostra "também aparece com
+        # OFICINA ..."). Já as linhas "aplicador na oficina" (tita = texto
+        # OFICINA, sem assistido) não entram na conta — vários aplicadores na
+        # mesma oficina é normal. As próprias linhas de oficina nunca ganham
+        # "!": o destino delas é decidido na mão, na cópia separada.
         contagem_por_tita_horario = {}
         for s in sessoes_encontradas:
+            if s["tipo"] == "OFICINA" and "OFICINA" in _normalizar(s["tita"]):
+                continue
             chave = (s["tita"], s["horario"])
             contagem_por_tita_horario[chave] = contagem_por_tita_horario.get(chave, 0) + 1
         for s in sessoes_encontradas:
+            if s["tipo"] == "OFICINA":
+                continue
             if contagem_por_tita_horario[(s["tita"], s["horario"])] > 1:
                 s["conflito"] = True
 
