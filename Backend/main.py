@@ -657,8 +657,13 @@ def _parse_linha_bulk(linha_bruta: str, aplicadores_validos: set):
     except ValueError:
         return None, f"data '{data_str}' inválida (use o formato DD/MM/AAAA)"
 
-    if aplicador_str not in aplicadores_validos:
-        return None, f"aplicador '{aplicador_str}' não encontrado entre os usuários cadastrados — confira o nome (maiúsculas/acentos incluídos)"
+    # Auxiliar/coordenação não tem login: qualquer nome com a tag (AUX) ou
+    # (COORD) é aceito, normalizado ("beatriz(aux)" -> "BEATRIZ (AUX)").
+    aplicador_com_tag = logica_escala.normalizar_aplicador_com_tag(aplicador_str)
+    if aplicador_com_tag:
+        aplicador_str = aplicador_com_tag
+    elif aplicador_str not in aplicadores_validos:
+        return None, f"aplicador '{aplicador_str}' não encontrado entre os usuários cadastrados — confira o nome (maiúsculas/acentos incluídos). Auxiliar ou coordenação: use NOME (AUX) ou NOME (COORD)"
 
     dia_semana = DIAS_SEMANA_PT[data_obj.weekday()]
 

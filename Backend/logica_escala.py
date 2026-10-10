@@ -389,6 +389,34 @@ def _remover_sufixo_parenteses(texto):
     return " ".join(sem_parenteses.split())
 
 
+# AUXILIARES / COORDENAÇÃO (pedido do Ken em 09/10/2026): em dias caóticos
+# auxiliares e coordenadores assumem sessões. No Direcionamento eles aparecem
+# na linha dos aplicadores como "TIAGO (AUX)" / "VERUSKA (COORD)". Eles não
+# têm login; a tag é o que identifica quem é (e distingue de um aplicador
+# com login de mesmo primeiro nome). Qualquer nome com a tag é aceito, sem
+# cadastro prévio (rotatividade alta).
+_REGEX_TAG_AUXILIAR = re.compile(r"^(.*?)\s*\(\s*(AUX|COORD)\s*\)\s*$", re.IGNORECASE)
+
+
+def normalizar_aplicador_com_tag(texto):
+    """
+    Se o texto termina com a tag (AUX) ou (COORD), devolve o nome normalizado
+    "NOME (AUX)" / "NOME (COORD)" (maiúsculo, um espaço antes da tag — assim
+    "beatriz(aux)" e "BEATRIZ (AUX)" viram o mesmo grupo). Sem a tag, devolve
+    None. Usado na leitura do Direcionamento e no Cadastro em Massa, pra a
+    regra ficar numa fonte de verdade só.
+    """
+    if not texto:
+        return None
+    m = _REGEX_TAG_AUXILIAR.match(texto.strip())
+    if not m:
+        return None
+    nome = " ".join(m.group(1).split()).upper()
+    if not nome:
+        return None
+    return f"{nome} ({m.group(2).upper()})"
+
+
 def processar_escala(url_planilha, callback_progresso, nome_aba):
     """
     callback_progresso: função que recebe (valor_float, texto_status).
@@ -564,7 +592,9 @@ def ler_referencia_e_piscina(url_planilha, nome_aba):
                         if j == 0:
                             continue
                         nome_prof = cell.get('formattedValue', '').strip()
-                        nome_prof = _remover_sufixo_parenteses(nome_prof)
+                        # (AUX)/(COORD) é mantido (identifica auxiliar/coordenação);
+                        # qualquer outro parêntese continua sendo cortado.
+                        nome_prof = normalizar_aplicador_com_tag(nome_prof) or _remover_sufixo_parenteses(nome_prof)
                         if nome_prof:
                             novo_mapa[j] = nome_prof
                 if novo_mapa:
