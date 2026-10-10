@@ -77,6 +77,7 @@ export default function AppAplicadores() {
 
   // GRUPO 2: busca por aplicador na Lista de Titas (só coordenação, item 1 das novas sugestões)
   const [buscaAplicador, setBuscaAplicador] = useState('');
+  const [visaoTitas, setVisaoTitas] = useState('aplicadores'); // 'aplicadores' | 'auxiliares' (só coordenação)
 
   // GESTÃO DE USUÁRIOS/LOGINS (coordenação)
   const [usuarios, setUsuarios] = useState([]);
@@ -747,8 +748,19 @@ export default function AppAplicadores() {
     }
   }, [token, isCoordenacao, tela, filtroRelatoDia, filtroRelatoTipo]);
 
-  // AGRUPA AS PENDÊNCIAS POR APLICADOR
-  const pendenciasAgrupadas = pendencias.reduce((acc, p) => {
+  // AUXILIARES / COORDENAÇÃO (09/10/2026): em dias caóticos eles assumem
+  // sessões. Não têm login — são identificados pela tag no nome do aplicador
+  // ("TIAGO (AUX)", "VERUSKA (COORD)"). É a MESMA tabela de pendências: o
+  // painel só filtra por essa tag (fonte única de verdade).
+  const ehAuxiliarOuCoord = (nome) => /\((AUX|COORD)\)\s*$/i.test(nome || '');
+  const pendenciasDaVisao = !isCoordenacao
+    ? pendencias
+    : pendencias.filter((p) => (visaoTitas === 'auxiliares') === ehAuxiliarOuCoord(p.aplicador));
+  const qtdPendentesAplicadores = pendencias.filter((p) => !p.feito && !ehAuxiliarOuCoord(p.aplicador)).length;
+  const qtdPendentesAuxiliares = pendencias.filter((p) => !p.feito && ehAuxiliarOuCoord(p.aplicador)).length;
+
+  // AGRUPA AS PENDÊNCIAS POR APLICADOR (ou, no painel, por auxiliar/coordenador)
+  const pendenciasAgrupadas = pendenciasDaVisao.reduce((acc, p) => {
     if (!acc[p.aplicador]) acc[p.aplicador] = [];
     acc[p.aplicador].push(p);
     return acc;
@@ -1320,7 +1332,8 @@ export default function AppAplicadores() {
               <p style={{ fontSize: '12px', color: '#333', lineHeight: '1.6', margin: 0 }}>
                   Uma linha por tita, campos separados por ";":<br/>
                   <strong>DATA;HORARIO;TITA;APLICADOR;OBSERVACAO</strong><br/>
-                  (DATA no formato DD/MM/AAAA · OBSERVACAO é opcional)
+                  (DATA no formato DD/MM/AAAA · OBSERVACAO é opcional)<br/>
+                  Auxiliar ou coordenação (sem login): use <strong>NOME (AUX)</strong> ou <strong>NOME (COORD)</strong> no APLICADOR
                 </p>
                 <textarea
                   value={textoBulk}
@@ -1878,8 +1891,33 @@ export default function AppAplicadores() {
       <div style={{ width: '100%' }}>
         <h2 className="mc-title" style={{ fontSize: '22px', margin: '0 0 16px 0' }}>Lista de TITAS</h2>
 
+        {/* Alternar entre aplicadores (com login) e o painel de auxiliares/coordenação (sem login) — só coordenação */}
+        {isCoordenacao && (
+          <>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <MinecraftButton
+                onClick={() => setVisaoTitas('aplicadores')}
+                style={{ fontSize: '9px', padding: '10px 12px', flex: 1, opacity: visaoTitas === 'aplicadores' ? 1 : 0.55 }}
+              >
+                Aplicadores ({qtdPendentesAplicadores})
+              </MinecraftButton>
+              <MinecraftButton
+                onClick={() => setVisaoTitas('auxiliares')}
+                style={{ fontSize: '9px', padding: '10px 12px', flex: 1, opacity: visaoTitas === 'auxiliares' ? 1 : 0.55 }}
+              >
+                Aux / Coord ({qtdPendentesAuxiliares})
+              </MinecraftButton>
+            </div>
+            {visaoTitas === 'auxiliares' && (
+              <p style={{ fontSize: '11px', color: '#555', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1.5', margin: '0 0 16px 0' }}>
+                Sessões assumidas por auxiliares e coordenação (sem login). Um bloco por pessoa; toque no card pra marcar como feito.
+              </p>
+            )}
+          </>
+        )}
+
         {/* GRUPO 2: busca + abrir/fechar todos — só coordenação (aplicador só tem um grupo, não faz sentido) */}
-        {isCoordenacao && pendencias.length > 0 && (
+        {isCoordenacao && pendenciasDaVisao.length > 0 && (
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
             <input
               type="text"
@@ -1895,9 +1933,11 @@ export default function AppAplicadores() {
         )}
 
         <MinecraftPanel>
-          {pendencias.length === 0 ? (
+          {pendenciasDaVisao.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#555', margin: '30px 0', fontSize: '12px', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1.6' }}>
-              Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉
+              {isCoordenacao && visaoTitas === 'auxiliares'
+                ? <>Nenhuma pendência de<br/>auxiliar ou coordenação<br/>por enquanto! 🎉</>
+                : <>Nenhuma pendência<br/>encontrada por<br/>enquanto! 🎉</>}
             </p>
           ) : aplicadoresFiltrados.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#555', margin: '10px 0', fontSize: '11px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
