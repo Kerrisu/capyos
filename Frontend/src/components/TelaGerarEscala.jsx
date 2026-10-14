@@ -454,7 +454,6 @@ export default function TelaGerarEscala({ onVoltar }) {
                   background: "#F4F6F8",
                   padding: 12,
                   marginBottom: 10,
-                  border: "2px solid #D7DCE2",
                   borderRadius: 14,
                 }}
               >
@@ -497,7 +496,6 @@ export default function TelaGerarEscala({ onVoltar }) {
                   maxHeight: 320,
                   overflowY: "auto",
                   marginBottom: 10,
-                  border: "2px solid #D7DCE2",
                   borderRadius: 14,
                   padding: 8,
                   background: "#FAFBFC",
@@ -565,7 +563,6 @@ export default function TelaGerarEscala({ onVoltar }) {
                 fontFamily: "Arial, Helvetica, sans-serif",
                 whiteSpace: "pre-wrap",
                 marginBottom: 14,
-                border: "2px solid var(--visor-navy)",
                 borderRadius: 14,
               }}
             >
