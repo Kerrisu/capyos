@@ -79,9 +79,11 @@ body {
   text-shadow: none;
   letter-spacing: 0.02em;
 }
+/* Painel branco: SEM borda (pedido do Ken em 14/10/2026), vale pra todo
+   container branco, atual e futuro. */
 .mc-panel {
   background: var(--visor-superficie);
-  border: 2px solid var(--visor-navy);
+  border: none;
   border-radius: 20px;
   padding: 20px;
   box-shadow: 3px 3px 0 rgba(5, 55, 98, 0.12);
