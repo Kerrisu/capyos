@@ -23,6 +23,7 @@
   --visor-texto: #1E1E1E;
   --visor-texto-suave: #55524C;
   --visor-borda: var(--visor-navy);
+  --visor-cinza-bloco: #D9DEE3;
 
   /* Mantidos pra compatibilidade com todo o CSS abaixo, que ainda usa os
      nomes antigos --mc-*. Apontam pros novos tokens VISOR. */
@@ -119,11 +120,11 @@ body {
   transform: translateY(1px);
 }
 .mc-button--disabled {
-  background: #D8D5CE;
+  background: var(--visor-navy);
   border: none;
-  color: #8A867C;
+  color: #FFFFFF;
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: 0.4;
 }
 .mc-button--danger {
   background: var(--visor-vermelho);
@@ -504,21 +505,8 @@ body {
 /* LISTA DE TITAS — busca e cards em pill, baseados nos mockups do Canva
    enviados pelo Ken em 26/09/2026. */
 /* ================================================== */
-.visor-tita-search {
-  flex: 1;
-  min-width: 140px;
-  padding: 12px 18px;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 13px;
-  border: 2px solid var(--visor-navy);
-  border-radius: 999px;
-  background-color: #FFFFFF;
-  color: var(--visor-texto);
-  outline: none;
-  box-shadow: none;
-}
 .visor-tita-group {
-  background: #D9DEE3;
+  background: var(--visor-cinza-bloco);
   border-radius: 18px;
   padding: 16px;
 }
@@ -595,23 +583,81 @@ body {
    arredondadas, no lugar dos cantos retos de antes (pedido do Ken em
    26/09/2026). */
 /* ================================================== */
-.visor-input {
-  padding: 12px 14px;
+/* PADRÃO ÚNICO DE CAMPO (pedido do Ken em 14/10/2026) — vale pra TODO input,
+   select e textarea, atual e futuro: pílula branca, SEM borda, sempre dentro
+   de um bloco cinza (.visor-tita-group) quando o fundo é branco. Em destaque
+   (foco, ou hover no desktop) vira azul escuro com texto branco, igual aos
+   botões. Sem anel de foco de propósito. */
+.visor-input,
+.visor-tita-search {
+  padding: 12px 18px;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 13px;
-  border: 2px solid var(--visor-navy);
-  border-radius: 14px;
+  border: none;
+  border-radius: 999px;
   background-color: #FFFFFF;
   color: var(--visor-texto);
   outline: none;
   box-shadow: none;
   width: 100%;
   box-sizing: border-box;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.visor-tita-search {
+  flex: 1;
+  min-width: 140px;
+}
+textarea.visor-input {
+  border-radius: 20px;
+}
+.visor-input:hover,
+.visor-input:focus,
+.visor-tita-search:hover,
+.visor-tita-search:focus {
+  background-color: var(--visor-navy);
+  color: #FFFFFF;
+}
+.visor-input::placeholder,
+.visor-tita-search::placeholder {
+  color: #7A7F85;
+  opacity: 1;
+}
+.visor-input:hover::placeholder,
+.visor-input:focus::placeholder,
+.visor-tita-search:hover::placeholder,
+.visor-tita-search:focus::placeholder {
+  color: rgba(255, 255, 255, 0.65);
+}
+/* Select: seta própria (a nativa some no azul escuro). Navy no repouso,
+   branca em destaque. */
+select.visor-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 42px;
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  background-size: 12px 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23053762' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+select.visor-input:hover,
+select.visor-input:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+/* A lista aberta do select é desenhada pelo navegador em fundo branco */
+select.visor-input option {
+  background-color: #FFFFFF;
+  color: var(--visor-texto);
+}
+/* Ícone do campo de hora/data fica branco quando o campo fica azul */
+.visor-input[type="time"]:hover::-webkit-calendar-picker-indicator,
+.visor-input[type="time"]:focus::-webkit-calendar-picker-indicator,
+.visor-input[type="date"]:hover::-webkit-calendar-picker-indicator,
+.visor-input[type="date"]:focus::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 .visor-dropdown-list {
-  border-radius: 14px;
+  border-radius: 20px;
   overflow: hidden;
-  border: 2px solid var(--visor-navy);
   background-color: #FFFFFF;
 }
 .visor-checkbox-chip {
@@ -619,8 +665,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 10px 14px;
-  border-radius: 14px;
-  border: 2px solid var(--visor-navy);
+  border-radius: 999px;
   background-color: #FFFFFF;
   cursor: pointer;
   font-family: Arial, Helvetica, sans-serif;
@@ -630,7 +675,6 @@ body {
 .visor-checkbox-chip--marcado {
   background: linear-gradient(135deg, #2EC4B6, #3BB273);
   color: #FFFFFF;
-  border-color: transparent;
 }
 
 /* Cards do Relatório de ABA no TiTa — mesmos gradientes da home (pedido do
@@ -758,9 +802,8 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-radius: 16px;
-  background: #F4F6F8;
-  border: 2px solid #E2E6EA;
+  border-radius: 999px;
+  background: var(--visor-cinza-bloco);
 }
 
 /* ================================================== */
@@ -799,8 +842,7 @@ body {
   margin: 0 0 10px 0;
 }
 .visor-input--pill {
-  border-radius: 999px;
-  padding: 12px 18px;
+  /* mantido por compatibilidade: todo campo já é pílula */
 }
 .visor-exec-grid {
   display: grid;
