@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MinecraftButton from "./MinecraftButton";
+import BotaoVoltar from "./BotaoVoltar";
 import MinecraftPanel from "./MinecraftPanel";
 import { obterConfiguracoesGerais, salvarConfiguracoesGerais } from "../api/capyos";
 
@@ -232,7 +233,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
             <p style={{ fontSize: 16, color: "var(--visor-vermelho)", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
-            <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} />
           </>
         )}
 
@@ -464,9 +465,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
               {estado === "salvando" ? "Salvando..." : sucesso ? "✅ Salvo!" : "Salvar configurações"}
             </MinecraftButton>
 
-            <MinecraftButton onClick={onVoltar} disabled={estado === "salvando"}>
-              Voltar
-            </MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} disabled={estado === "salvando"} />
           </>
         )}
       </MinecraftPanel>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MinecraftButton from './MinecraftButton';
+import BotaoVoltar from './BotaoVoltar';
 import MinecraftPanel from './MinecraftPanel';
 import Capybara from './Capybara';
 import TelaGerarEscala from './TelaGerarEscala';
@@ -61,6 +62,7 @@ export default function AppAplicadores() {
   const [copiadoModalDirecionamento, setCopiadoModalDirecionamento] = useState(false);
   const [copiadoOficinasDirecionamento, setCopiadoOficinasDirecionamento] = useState(false);
   const [copiadoModalOficinasDirecionamento, setCopiadoModalOficinasDirecionamento] = useState(false);
+  const [sessaoCopiadaId, setSessaoCopiadaId] = useState(null); // id da sessão cujo 📋 acabou de copiar
   const [abaManualDirecionamento, setAbaManualDirecionamento] = useState(''); // '' = aba de hoje
   const [buscaHistoricoDirecionamento, setBuscaHistoricoDirecionamento] = useState('');
   const [buscaModalDirecionamento, setBuscaModalDirecionamento] = useState('');
@@ -88,6 +90,7 @@ export default function AppAplicadores() {
   const [carregandoUsuario, setCarregandoUsuario] = useState(false);
   const [erroUsuario, setErroUsuario] = useState('');
   const [removendoLogin, setRemovendoLogin] = useState('');
+  const [confirmandoRemocaoLogin, setConfirmandoRemocaoLogin] = useState(''); // login aguardando "Sim, remover"
 
   // GRUPO 3: painel "Gerenciar Aplicadores" agora é uma tela do menu (item 6)
   // (antes era um modal atrás de um ícone de engrenagem)
@@ -115,11 +118,9 @@ export default function AppAplicadores() {
   const [carregandoRelatos, setCarregandoRelatos] = useState(false);
   const [filtroRelatoDia, setFiltroRelatoDia] = useState('');
   const [filtroRelatoTipo, setFiltroRelatoTipo] = useState('');
-  const [modoRemocaoRelatos, setModoRemocaoRelatos] = useState(false);
   const [selecionadosRelatos, setSelecionadosRelatos] = useState([]);
   const [confirmandoRemocaoRelatos, setConfirmandoRemocaoRelatos] = useState(false);
   const [carregandoRemocaoRelatos, setCarregandoRemocaoRelatos] = useState(false);
-  const confirmarRemocaoRelatosTimeoutRef = useRef(null);
 
   // EDIÇÃO DE USUÁRIO EXISTENTE (coordenação)
   const [loginEmEdicao, setLoginEmEdicao] = useState('');
@@ -517,6 +518,7 @@ export default function AppAplicadores() {
   };
 
   const handleRemoverUsuario = async (loginAlvo) => {
+    setConfirmandoRemocaoLogin('');
     setRemovendoLogin(loginAlvo);
     setErroUsuario('');
 
@@ -664,23 +666,10 @@ export default function AppAplicadores() {
     }
   };
 
-  const handleToggleModoRemocaoRelatos = () => {
-    setModoRemocaoRelatos(prev => !prev);
-    setSelecionadosRelatos([]);
-    setConfirmandoRemocaoRelatos(false);
-  };
-
   const toggleSelecaoRelato = (id) => {
     setConfirmandoRemocaoRelatos(false);
     setSelecionadosRelatos(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleToggleSelecionarTodosRelatos = () => {
-    setConfirmandoRemocaoRelatos(false);
-    setSelecionadosRelatos(prev =>
-      prev.length === relatos.length ? [] : relatos.map(r => r.id)
     );
   };
 
@@ -700,7 +689,6 @@ export default function AppAplicadores() {
 
       if (response.ok) {
         setSelecionadosRelatos([]);
-        setModoRemocaoRelatos(false);
         carregarRelatos();
       }
     } catch (err) {
@@ -709,18 +697,6 @@ export default function AppAplicadores() {
       setCarregandoRemocaoRelatos(false);
       setConfirmandoRemocaoRelatos(false);
     }
-  };
-
-  // Mesmo padrão de confirmação dupla usado na remoção em lote de pendências
-  const handleClickConfirmarRemocaoRelatos = () => {
-    if (!confirmandoRemocaoRelatos) {
-      setConfirmandoRemocaoRelatos(true);
-      if (confirmarRemocaoRelatosTimeoutRef.current) clearTimeout(confirmarRemocaoRelatosTimeoutRef.current);
-      confirmarRemocaoRelatosTimeoutRef.current = setTimeout(() => setConfirmandoRemocaoRelatos(false), 4000);
-      return;
-    }
-    if (confirmarRemocaoRelatosTimeoutRef.current) clearTimeout(confirmarRemocaoRelatosTimeoutRef.current);
-    handleConfirmarRemocaoRelatos();
   };
 
   useEffect(() => {
@@ -922,6 +898,19 @@ export default function AppAplicadores() {
     });
   };
 
+  // Copia só UMA sessão (botão 📋 do card). Usa o mesmo formatador do
+  // "Copiar sessões" — inclusive a observação de CONFLITO/oficina — e a lista
+  // completa da execução pra achar quem mais aparece na duplicada.
+  const handleCopiarUmaSessaoDirecionamento = (sessao, todas) => {
+    const texto = formatarSessoesParaBulk([sessao], todas);
+    navigator.clipboard.writeText(texto).then(() => {
+      setSessaoCopiadaId(sessao.id);
+      setTimeout(() => setSessaoCopiadaId((atual) => (atual === sessao.id ? null : atual)), 1800);
+    }).catch((err) => {
+      console.error('Erro ao copiar sessão do Direcionamento:', err);
+    });
+  };
+
   // Card de uma sessão no modal do histórico
   const renderCardSessaoDirecionamento = (s) => {
     const classe = s.tipo === 'PISCINA' ? 'piscina' : ehOficinaDirecionamento(s) ? 'oficina' : 'referencia';
@@ -934,7 +923,18 @@ export default function AppAplicadores() {
         ) : (
           <span>{s.horario} — <strong>{s.tita}</strong> ({s.aplicador}) · {s.tipo === 'PISCINA' ? 'Piscina' : 'Referência'}</span>
         )}
-        {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
+        <span className="visor-direcionamento-acoes">
+          {s.conflito && <span className="visor-direcionamento-conflito" title="Conflito: mesma tita/horário com aplicador diferente">!</span>}
+          <button
+            type="button"
+            className="visor-direcionamento-copiar"
+            onClick={() => handleCopiarUmaSessaoDirecionamento(s, sessoesDaExecucao)}
+            title="Copiar só esta sessão"
+            aria-label="Copiar só esta sessão"
+          >
+            {sessaoCopiadaId === s.id ? '✅' : '📋'}
+          </button>
+        </span>
       </div>
     );
   };
@@ -992,7 +992,7 @@ export default function AppAplicadores() {
     'titas': 'home',
     'relatar-aba': 'home',
     'cadastro-massa': 'home',
-    'direcionamento': 'cadastro-massa',
+    'direcionamento': 'home',
     'relatos-aba': 'home',
     'gerenciar-usuarios': 'home',
     'salas-pacientes': 'home',
@@ -1016,6 +1016,7 @@ export default function AppAplicadores() {
         { label: 'Lista de Titas', onClick: () => irPara('titas') },
         { label: 'Relatar Sessão sem ABA', onClick: () => irPara('relatar-aba') },
         { label: 'Cadastro em Massa', onClick: () => irPara('cadastro-massa') },
+        { label: 'Registro e Histórico de Sessões e Referências', onClick: () => irPara('direcionamento') },
         { label: 'Relatório de ABA no TiTa', onClick: () => irPara('relatos-aba') },
       ],
     },
@@ -1187,15 +1188,6 @@ export default function AppAplicadores() {
         </div>
       )}
 
-      {/* Botão de voltar das telas finais (Lista de Titas, Cadastro em Massa,
-          etc.) — as telas de Salas já têm o próprio botão embutido, então
-          ficam de fora daqui */}
-      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes', 'direcionamento'].includes(tela) && (
-        <MinecraftButton onClick={() => setTela(TELA_PAI[tela] || 'home')} style={{ fontSize: '10px', padding: '10px 14px', marginBottom: '16px', alignSelf: 'flex-start' }}>
-          ← Voltar
-        </MinecraftButton>
-      )}
-
       {/* ========================================== */}
       {/* DIRECIONAMENTO DE SALAS — agora dentro do mesmo login, exclusivo coordenação */}
       {/* ========================================== */}
@@ -1364,22 +1356,9 @@ export default function AppAplicadores() {
         </MinecraftPanel>
       )}
 
-      {isCoordenacao && tela === 'cadastro-massa' && (
-        <div style={{ width: '100%', marginTop: '16px' }}>
-          <MinecraftPanel title="Registro de Referência/Piscina">
-            <p style={{ fontSize: '12px', color: '#333', lineHeight: '1.6', margin: '0 0 12px 0' }}>
-              Registro automático (por horário agendado) de quem precisou de referência ou foi pra piscina no Direcionamento real de hoje.
-            </p>
-            <MinecraftButton onClick={() => irPara('direcionamento')}>
-              Abrir Registro de Referência/Piscina
-            </MinecraftButton>
-          </MinecraftPanel>
-        </div>
-      )}
-
       {isCoordenacao && tela === 'direcionamento' && (
         <div style={{ width: '100%' }}>
-          <h2 className="mc-title" style={{ fontSize: '22px', margin: '0 0 16px 0' }}>Registro de Referência/Piscina</h2>
+          <h2 className="mc-title" style={{ fontSize: '22px', margin: '0 0 16px 0' }}>Registro e Histórico de Sessões e Referências</h2>
 
           <div className="visor-direc-layout">
 
@@ -1586,17 +1565,6 @@ export default function AppAplicadores() {
 
             </div>
           </div>
-
-          {/* Voltar em pílula, igual ao design */}
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-            <MinecraftButton
-              onClick={() => setTela(TELA_PAI['direcionamento'])}
-              className="mc-button--claro"
-              style={{ width: '100%', maxWidth: '360px' }}
-            >
-              Voltar
-            </MinecraftButton>
-          </div>
         </div>
       )}
 
@@ -1753,11 +1721,11 @@ export default function AppAplicadores() {
 
                 {/* Filtros */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <select value={filtroRelatoDia} onChange={(e) => setFiltroRelatoDia(e.target.value)} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
+                  <select value={filtroRelatoDia} onChange={(e) => { setFiltroRelatoDia(e.target.value); setSelecionadosRelatos([]); setConfirmandoRemocaoRelatos(false); }} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
                     <option value="">Todos os dias</option>
                     {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
                   </select>
-                  <select value={filtroRelatoTipo} onChange={(e) => setFiltroRelatoTipo(e.target.value)} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
+                  <select value={filtroRelatoTipo} onChange={(e) => { setFiltroRelatoTipo(e.target.value); setSelecionadosRelatos([]); setConfirmandoRemocaoRelatos(false); }} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
                     <option value="">Todos os tipos</option>
                     <option value="sem_aba">Está sem ABA no TITA</option>
                     <option value="perdeu_sessao">Não possui mais essa sessão</option>
@@ -1776,53 +1744,62 @@ export default function AppAplicadores() {
 
                 {!carregandoRelatos && relatos.length > 0 && (
                   <>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <MinecraftButton onClick={handleToggleModoRemocaoRelatos} style={{ fontSize: '9px', padding: '8px 10px' }}>
-                        {modoRemocaoRelatos ? 'Cancelar remoção' : 'Modo de remoção'}
-                      </MinecraftButton>
-                      {modoRemocaoRelatos && (
-                        <MinecraftButton onClick={handleToggleSelecionarTodosRelatos} style={{ fontSize: '9px', padding: '8px 10px' }}>
-                          {selecionadosRelatos.length === relatos.length ? 'Desmarcar todos' : 'Selecionar todos'}
-                        </MinecraftButton>
-                      )}
-                    </div>
-
+                    {/* Checkbox sempre visível — mesmo padrão da remoção do histórico de execuções */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {relatos.map((r) => (
                         <label
                           key={r.id}
                           className={`visor-relato-card ${r.tipo === 'sem_aba' ? 'visor-relato-card--sem-aba' : 'visor-relato-card--perdeu-sessao'}`}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: modoRemocaoRelatos ? 'pointer' : 'default', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', color: '#1E1E1E' }}
                         >
-                          {modoRemocaoRelatos && (
-                            <input
-                              type="checkbox"
-                              checked={selecionadosRelatos.includes(r.id)}
-                              onChange={() => toggleSelecaoRelato(r.id)}
-                              style={{ width: '16px', height: '16px', flexShrink: 0 }}
-                            />
-                          )}
-                          <span style={{ lineHeight: '1.6' }}>
-                            {r.assistido} <span style={{ color: '#333' }}>— {capitalizar(r.dia_semana)}, {r.horario}</span><br />
-                            <span style={{ color: '#1E1E1E', fontWeight: 700 }}>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</span> · <span style={{ color: '#333' }}>relatado por {r.aplicador}</span>
-                            {r.observacao && <><br /><span style={{ color: '#333' }}>Obs: {r.observacao}</span></>}
+                          <input
+                            type="checkbox"
+                            checked={selecionadosRelatos.includes(r.id)}
+                            onChange={() => toggleSelecaoRelato(r.id)}
+                            style={{ width: '18px', height: '18px', flexShrink: 0 }}
+                          />
+                          <span>
+                            {r.assistido} <span className="visor-relato-secundario">— {capitalizar(r.dia_semana)}, {r.horario}</span><br />
+                            <strong>{LABEL_TIPO_RELATO[r.tipo] || r.tipo}</strong> · <span className="visor-relato-secundario">relatado por {r.aplicador}</span>
+                            {r.observacao && <><br /><span className="visor-relato-secundario">Obs: {r.observacao}</span></>}
                           </span>
                         </label>
                       ))}
                     </div>
 
-                    {modoRemocaoRelatos && (
-                      <MinecraftButton
-                        onClick={handleClickConfirmarRemocaoRelatos}
-                        disabled={carregandoRemocaoRelatos || selecionadosRelatos.length === 0}
-                        style={confirmandoRemocaoRelatos ? { backgroundColor: '#a83232', color: '#fff' } : undefined}
-                      >
-                        {carregandoRemocaoRelatos
-                          ? 'Removendo...'
-                          : confirmandoRemocaoRelatos
-                            ? `Tem certeza? Clique de novo (${selecionadosRelatos.length})`
-                            : `Remover selecionados (${selecionadosRelatos.length})`}
-                      </MinecraftButton>
+                    {selecionadosRelatos.length > 0 && (
+                      <div style={{ marginTop: '6px' }}>
+                        {!confirmandoRemocaoRelatos ? (
+                          <MinecraftButton
+                            className="mc-button--danger"
+                            onClick={() => setConfirmandoRemocaoRelatos(true)}
+                          >
+                            Remover selecionados ({selecionadosRelatos.length})
+                          </MinecraftButton>
+                        ) : (
+                          <div style={{ background: '#FFF3D0', border: '2px solid var(--visor-amarelo-escuro)', borderRadius: '14px', padding: '10px' }}>
+                            <p style={{ fontSize: '12px', color: '#1E1E1E', margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                              ⚠️ Remover {selecionadosRelatos.length} relato(s) definitivamente? Essa ação não tem volta.
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <MinecraftButton
+                                className="mc-button--danger"
+                                onClick={handleConfirmarRemocaoRelatos}
+                                disabled={carregandoRemocaoRelatos}
+                                style={{ width: 'auto', flexShrink: 0 }}
+                              >
+                                {carregandoRemocaoRelatos ? 'Removendo...' : 'Sim, remover'}
+                              </MinecraftButton>
+                              <MinecraftButton
+                                onClick={() => setConfirmandoRemocaoRelatos(false)}
+                                disabled={carregandoRemocaoRelatos}
+                                style={{ width: 'auto', flexShrink: 0 }}
+                              >
+                                Cancelar
+                              </MinecraftButton>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </>
                 )}
@@ -1861,22 +1838,45 @@ export default function AppAplicadores() {
                 {/* Lista de usuários existentes */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #E2E6EA', paddingTop: '14px' }}>
                   {usuarios.map((u) => (
-                    <div
-                      key={u.login}
-                      className="visor-list-item"
-                    >
-                      <div>
-                        <div style={{ color: '#1E1E1E', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px' }}>{u.nome} {u.login === loginAtual && '(você)'}</div>
-                        <div style={{ color: '#555', fontSize: '11px', marginTop: '4px', fontFamily: 'Arial, Helvetica, sans-serif' }}>{u.login} · {u.papel}</div>
+                    <React.Fragment key={u.login}>
+                      <div className="visor-list-item">
+                        <div>
+                          <div style={{ color: '#1E1E1E', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '13px' }}>{u.nome} {u.login === loginAtual && '(você)'}</div>
+                          <div style={{ color: '#555', fontSize: '11px', marginTop: '4px', fontFamily: 'Arial, Helvetica, sans-serif' }}>{u.login} · {u.papel}</div>
+                        </div>
+                        <MinecraftButton
+                          onClick={() => setConfirmandoRemocaoLogin(u.login)}
+                          disabled={u.login === loginAtual || removendoLogin === u.login}
+                          style={{ fontSize: '9px', padding: '8px 10px' }}
+                        >
+                          {removendoLogin === u.login ? '...' : 'Remover'}
+                        </MinecraftButton>
                       </div>
-                      <MinecraftButton
-                        onClick={() => handleRemoverUsuario(u.login)}
-                        disabled={u.login === loginAtual || removendoLogin === u.login}
-                        style={{ fontSize: '9px', padding: '8px 10px' }}
-                      >
-                        {removendoLogin === u.login ? '...' : 'Remover'}
-                      </MinecraftButton>
-                    </div>
+
+                      {/* Confirmação — mesmo padrão da remoção do histórico (caixa amarela, Sim/Cancelar) */}
+                      {confirmandoRemocaoLogin === u.login && (
+                        <div style={{ background: '#FFF3D0', border: '2px solid var(--visor-amarelo-escuro)', borderRadius: '14px', padding: '10px' }}>
+                          <p style={{ fontSize: '12px', color: '#1E1E1E', margin: '0 0 8px 0', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                            ⚠️ Remover {u.nome} definitivamente? Essa ação não tem volta.
+                          </p>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <MinecraftButton
+                              className="mc-button--danger"
+                              onClick={() => handleRemoverUsuario(u.login)}
+                              style={{ width: 'auto', flexShrink: 0 }}
+                            >
+                              Sim, remover
+                            </MinecraftButton>
+                            <MinecraftButton
+                              onClick={() => setConfirmandoRemocaoLogin('')}
+                              style={{ width: 'auto', flexShrink: 0 }}
+                            >
+                              Cancelar
+                            </MinecraftButton>
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
                   ))}
                 </div>
               </div>
@@ -1999,6 +1999,13 @@ export default function AppAplicadores() {
           )}
         </MinecraftPanel>
       </div>
+      )}
+
+      {/* Voltar padrão (pílula branca, embaixo de tudo) — único pra todas as
+          telas. As telas de Salas usam o mesmo BotaoVoltar dentro do próprio
+          painel (têm lógica de desabilitar durante salvar/gerar). */}
+      {tela !== 'home' && !['gerar-escala', 'salas-pacientes', 'salas-configuracoes'].includes(tela) && (
+        <BotaoVoltar onClick={() => setTela(TELA_PAI[tela] || 'home')} />
       )}
     </div>
     </>

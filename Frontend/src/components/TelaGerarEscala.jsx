@@ -10,6 +10,7 @@ import {
   closestCenter,
 } from "@dnd-kit/core";
 import MinecraftButton from "./MinecraftButton";
+import BotaoVoltar from "./BotaoVoltar";
 import MinecraftPanel from "./MinecraftPanel";
 import { getAbas, gerarEscala, formatarEscala, escreverVacancia } from "../api/capyos";
 
@@ -402,7 +403,7 @@ export default function TelaGerarEscala({ onVoltar }) {
             <p style={{ fontSize: 16, color: "var(--visor-vermelho)", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
-            <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} />
           </>
         )}
 
@@ -436,9 +437,7 @@ export default function TelaGerarEscala({ onVoltar }) {
               {estado === "gerando" ? "Gerando..." : "Gerar Escala"}
             </MinecraftButton>
 
-            <MinecraftButton onClick={onVoltar} disabled={estado === "gerando"}>
-              Voltar
-            </MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} disabled={estado === "gerando"} />
           </>
         )}
 
@@ -593,7 +592,7 @@ export default function TelaGerarEscala({ onVoltar }) {
               {copiado ? "✅ Texto copiado!" : "Copiar texto (WhatsApp)"}
             </MinecraftButton>
 
-            <MinecraftButton onClick={onVoltar}>Voltar ao início</MinecraftButton>
+            <BotaoVoltar onClick={onVoltar}>Voltar ao início</BotaoVoltar>
           </>
         )}
       </MinecraftPanel>

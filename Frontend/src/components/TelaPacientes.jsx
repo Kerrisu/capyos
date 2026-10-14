@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MinecraftButton from "./MinecraftButton";
+import BotaoVoltar from "./BotaoVoltar";
 import MinecraftPanel from "./MinecraftPanel";
 import TelaFormPaciente from "./TelaFormPaciente";
 import { listarPacientes, removerPaciente } from "../api/capyos";
@@ -127,7 +128,7 @@ export default function TelaPacientes({ onVoltar }) {
             <p style={{ fontSize: 16, color: "#8B0000", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
-            <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} />
           </>
         )}
 
@@ -310,7 +311,7 @@ export default function TelaPacientes({ onVoltar }) {
               ))}
             </div>
 
-            <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} />
           </>
         )}
       </MinecraftPanel>

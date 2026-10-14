@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MinecraftButton from "./MinecraftButton";
+import BotaoVoltar from "./BotaoVoltar";
 import MinecraftPanel from "./MinecraftPanel";
 import { buscarPaciente, salvarPaciente, obterConfiguracoesGerais } from "../api/capyos";
 
@@ -156,7 +157,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
             <p style={{ fontSize: 16, color: "var(--visor-vermelho)", textAlign: "center", marginBottom: 12 }}>
               🔴 {erro}
             </p>
-            <MinecraftButton onClick={onVoltar}>Voltar</MinecraftButton>
+            <BotaoVoltar onClick={onVoltar} />
           </>
         )}
 
