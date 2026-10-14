@@ -21,17 +21,6 @@ const CONFIG_PADRAO = {
   aplicadores_formados: {},
 };
 
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  fontSize: 16,
-  padding: 10,
-  marginBottom: 14,
-  fontFamily: "Arial, Helvetica, sans-serif",
-  border: "2px solid var(--visor-navy)",
-  borderRadius: 14,
-};
-
 const labelStyle = {
   display: "block",
   fontSize: 16,
@@ -248,7 +237,8 @@ export default function TelaConfiguracoes({ onVoltar }) {
                 onChange={(e) => atualizarCampo("url_planilha", e.target.value)}
                 disabled={estado === "salvando"}
                 placeholder="https://docs.google.com/spreadsheets/d/..."
-                style={inputStyle}
+                className="visor-input"
+                style={{ marginBottom: 14 }}
               />
               <label style={labelStyle}>URL da Vacância:</label>
               <input
@@ -257,7 +247,7 @@ export default function TelaConfiguracoes({ onVoltar }) {
                 onChange={(e) => atualizarCampo("url_vacancia", e.target.value)}
                 disabled={estado === "salvando"}
                 placeholder="https://docs.google.com/spreadsheets/d/..."
-                style={{ ...inputStyle, marginBottom: 0 }}
+                className="visor-input"
               />
             </div>
 
@@ -326,7 +316,8 @@ export default function TelaConfiguracoes({ onVoltar }) {
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), adicionarSala())}
                   disabled={estado === "salvando"}
                   placeholder="Ex: ABA 14, MUSICOTERAPIA COM TATAMES..."
-                  style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
+                  className="visor-input"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
                 <MinecraftButton
                   onClick={adicionarSala}
@@ -430,13 +421,15 @@ export default function TelaConfiguracoes({ onVoltar }) {
                   onChange={(e) => setNovoAplicadorNome(e.target.value)}
                   disabled={estado === "salvando"}
                   placeholder="Nome do profissional"
-                  style={{ ...inputStyle, marginBottom: 0, flex: 1, minWidth: 0 }}
+                  className="visor-input"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
                 <select
                   value={novoAplicadorSala}
                   onChange={(e) => setNovoAplicadorSala(e.target.value)}
                   disabled={estado === "salvando"}
-                  style={{ ...inputStyle, marginBottom: 0, width: 120 }}
+                  className="visor-input"
+                  style={{ width: 120, flexShrink: 0 }}
                 >
                   <option value="">Sala...</option>
                   {config.todas_as_salas.map((sala) => (

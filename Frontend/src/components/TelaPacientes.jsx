@@ -18,7 +18,6 @@ function Badge({ ativo, label }) {
         marginRight: 6,
         marginBottom: 4,
         borderRadius: 999,
-        border: "2px solid var(--visor-navy)",
         background: ativo ? "#D4FFD4" : "#F0F0F0",
         color: "#2B2B2B",
       }}
@@ -143,22 +142,14 @@ export default function TelaPacientes({ onVoltar }) {
               + Novo Assistido
             </MinecraftButton>
 
+            <div className="visor-tita-group" style={{ marginTop: 10, marginBottom: 14 }}>
             <input
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por nome..."
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                fontSize: 16,
-                padding: 10,
-                marginTop: 10,
-                marginBottom: 10,
-                fontFamily: "Arial, Helvetica, sans-serif",
-                border: "2px solid var(--visor-navy)",
-                borderRadius: 14,
-              }}
+              className="visor-input"
+              style={{ marginBottom: 10 }}
             />
 
             <p style={{ fontSize: 15, color: "#2B2B2B", marginBottom: 10 }}>
@@ -169,9 +160,7 @@ export default function TelaPacientes({ onVoltar }) {
               style={{
                 maxHeight: 340,
                 overflowY: "auto",
-                marginBottom: 14,
-                border: "2px solid var(--visor-navy)",
-                borderRadius: 16,
+                borderRadius: 20,
                 background: "#FFFFFF",
               }}
             >
@@ -309,6 +298,7 @@ export default function TelaPacientes({ onVoltar }) {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
 
             <BotaoVoltar onClick={onVoltar} />

@@ -409,29 +409,30 @@ export default function TelaGerarEscala({ onVoltar }) {
 
         {(estado === "pronto" || estado === "gerando") && (
           <>
-            <label
-              style={{
-                display: "block",
-                fontSize: 16,
-                color: "#2B2B2B",
-                marginBottom: 6,
-              }}
-            >
-              Escolha o dia:
-            </label>
-            <select
-              value={abaSelecionada}
-              onChange={(e) => setAbaSelecionada(e.target.value)}
-              disabled={estado === "gerando"}
-              className="visor-input"
-              style={{ marginBottom: 14 }}
-            >
-              {abas.map((aba) => (
-                <option key={aba} value={aba}>
-                  {aba}
-                </option>
-              ))}
-            </select>
+            <div className="visor-tita-group" style={{ marginBottom: 14 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 16,
+                  color: "#2B2B2B",
+                  marginBottom: 6,
+                }}
+              >
+                Escolha o dia:
+              </label>
+              <select
+                value={abaSelecionada}
+                onChange={(e) => setAbaSelecionada(e.target.value)}
+                disabled={estado === "gerando"}
+                className="visor-input"
+              >
+                {abas.map((aba) => (
+                  <option key={aba} value={aba}>
+                    {aba}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <MinecraftButton onClick={handleGerar} disabled={estado === "gerando" || !abaSelecionada}>
               {estado === "gerando" ? "Gerando..." : "Gerar Escala"}

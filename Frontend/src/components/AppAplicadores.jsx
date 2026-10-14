@@ -975,8 +975,10 @@ export default function AppAplicadores() {
         <div style={{ width: '100%' }}>
           <MinecraftPanel title="Acesso Restrito">
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
-              <input type="text" placeholder="Seu login" value={loginInput} onChange={(e) => setLoginInput(e.target.value)} style={{ padding: '12px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} required />
-              <input type="password" placeholder="Sua senha" value={senhaInput} onChange={(e) => setSenhaInput(e.target.value)} style={{ padding: '12px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '12px', border: '2px solid #053762', backgroundColor: '#FFFFFF', outline: 'none', boxShadow: 'none' }} required />
+              <div className="visor-tita-group" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <input type="text" placeholder="Seu login" value={loginInput} onChange={(e) => setLoginInput(e.target.value)} className="visor-input" required />
+                <input type="password" placeholder="Sua senha" value={senhaInput} onChange={(e) => setSenhaInput(e.target.value)} className="visor-input" required />
+              </div>
               <MinecraftButton type="submit" onClick={() => {}}>{carregando ? 'Entrando...' : 'Entrar'}</MinecraftButton>
               {erro && <p style={{ color: '#ff5555', fontSize: '12px', textAlign: 'center', margin: 0, textShadow: '1px 1px 0 #000' }}>{erro}</p>}
             </form>
@@ -1205,6 +1207,7 @@ export default function AppAplicadores() {
               Use quando um assistido tem/tinha sessão de ABA marcada na agenda, mas ela não existe no Titas.
             </p>
 
+            <div className="visor-tita-group" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {!relatoModoManual ? (
                 <div style={{ position: 'relative' }}>
                   <input
@@ -1225,7 +1228,7 @@ export default function AppAplicadores() {
                         <div
                           key={nome}
                           onMouseDown={() => escolherAssistidoRelato(nome)}
-                          style={{ padding: '8px 10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', cursor: 'pointer', borderBottom: '1px solid #ccc' }}
+                          style={{ padding: '8px 10px', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '9px', cursor: 'pointer' }}
                         >
                           {nome}
                         </div>
@@ -1312,6 +1315,7 @@ export default function AppAplicadores() {
                 </p>
               )}
             </div>
+            </div>
         </MinecraftPanel>
       )}
 
@@ -1327,6 +1331,7 @@ export default function AppAplicadores() {
                   (DATA no formato DD/MM/AAAA · OBSERVACAO é opcional)<br/>
                   Auxiliar ou coordenação (sem login): use <strong>NOME (AUX)</strong> ou <strong>NOME (COORD)</strong> no APLICADOR
                 </p>
+                <div className="visor-tita-group" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <textarea
                   value={textoBulk}
                   onChange={(e) => setTextoBulk(e.target.value)}
@@ -1338,6 +1343,7 @@ export default function AppAplicadores() {
                 <MinecraftButton onClick={handleEnviarBulk} disabled={carregandoBulk || !textoBulk.trim()}>
                   {carregandoBulk ? 'Enviando...' : 'Cadastrar Titas'}
                 </MinecraftButton>
+                </div>
 
                 {resultadoBulk && (
                   <div style={{ fontSize: '10px', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1.8' }}>
@@ -1588,14 +1594,15 @@ export default function AppAplicadores() {
               </button>
             </div>
 
-            <input
-              type="text"
-              placeholder="Buscar aplicador ou assistido..."
-              value={buscaModalDirecionamento}
-              onChange={(e) => setBuscaModalDirecionamento(e.target.value)}
-              className="visor-input"
-              style={{ marginBottom: '10px' }}
-            />
+            <div className="visor-tita-group" style={{ marginBottom: '12px' }}>
+              <input
+                type="text"
+                placeholder="Buscar aplicador ou assistido..."
+                value={buscaModalDirecionamento}
+                onChange={(e) => setBuscaModalDirecionamento(e.target.value)}
+                className="visor-input"
+              />
+            </div>
 
             {!carregandoSessoes && sessoesDaExecucao.length > 0 && (() => {
               const { oficinas, normaisOrdenadas } = separarSessoesDirecionamento(sessoesDaExecucao);
@@ -1720,7 +1727,7 @@ export default function AppAplicadores() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
 
                 {/* Filtros */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="visor-tita-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <select value={filtroRelatoDia} onChange={(e) => { setFiltroRelatoDia(e.target.value); setSelecionadosRelatos([]); setConfirmandoRemocaoRelatos(false); }} className="visor-input" style={{ flex: 1, minWidth: '120px' }}>
                     <option value="">Todos os dias</option>
                     {DIAS_SEMANA_RELATO.map(d => <option key={d} value={d}>{capitalizar(d)}</option>)}
@@ -1820,7 +1827,7 @@ export default function AppAplicadores() {
                 </p>
 
                 {/* Formulário de criação */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="visor-tita-group" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <p style={{ fontSize: '10px', color: '#111', margin: 0, fontFamily: 'Arial, Helvetica, sans-serif' }}>Novo aplicador/coordenação</p>
                   <input type="text" placeholder="Nome completo" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} className="visor-input" />
                   <input type="text" placeholder="Login" value={novoLogin} onChange={(e) => setNovoLogin(e.target.value)} className="visor-input" />
@@ -1836,7 +1843,7 @@ export default function AppAplicadores() {
                 </div>
 
                 {/* Lista de usuários existentes */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '2px solid #E2E6EA', paddingTop: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {usuarios.map((u) => (
                     <React.Fragment key={u.login}>
                       <div className="visor-list-item">

@@ -21,19 +21,6 @@ const CONFIG_PADRAO = {
 // config.todas_as_salas, cadastrada em Configurações Gerais.
 const SALAS_FALLBACK = Array.from({ length: 13 }, (_, i) => `ABA ${String(i + 1).padStart(2, "0")}`);
 
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  fontSize: 16,
-  padding: 10,
-  marginBottom: 14,
-  fontFamily: "Arial, Helvetica, sans-serif",
-  border: "2px solid var(--visor-navy)",
-  borderRadius: 14,
-};
-
-const selectStyle = { ...inputStyle };
-
 const labelStyle = {
   display: "block",
   fontSize: 16,
@@ -163,6 +150,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
 
         {(estado === "pronto" || estado === "salvando") && (
           <>
+            <div className="visor-tita-group" style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Nome do assistido:</label>
             <input
               type="text"
@@ -170,10 +158,8 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
               onChange={(e) => setNome(e.target.value)}
               disabled={modoEdicao || estado === "salvando"}
               placeholder="Ex: ARTHUR FERNANDES"
-              style={{
-                ...inputStyle,
-                background: modoEdicao ? "#E8E8E8" : "#FFFFFF",
-              }}
+              className="visor-input"
+              style={{ marginBottom: 14, ...(modoEdicao ? { backgroundColor: "#EEF1F4", color: "#55524C" } : {}) }}
             />
 
             <label style={labelStyle}>Sala fixa (opcional):</label>
@@ -181,7 +167,8 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
               value={config.sala_fixa}
               onChange={(e) => atualizarCampo("sala_fixa", e.target.value)}
               disabled={estado === "salvando"}
-              style={selectStyle}
+              className="visor-input"
+              style={{ marginBottom: 14 }}
             >
               <option value="">— Nenhuma —</option>
               {salas.map((sala) => (
@@ -207,7 +194,8 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
                   }
                 }}
                 disabled={estado === "salvando"}
-                style={selectStyle}
+                className="visor-input"
+              style={{ marginBottom: 14 }}
               >
                 <option value="">— Nenhum —</option>
                 {gruposExistentes.map((grupo) => (
@@ -225,7 +213,8 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
                   onChange={(e) => atualizarCampo("grupo_match", e.target.value)}
                   disabled={estado === "salvando"}
                   placeholder="Ex: GRUPO-A"
-                  style={{ ...inputStyle, marginBottom: 6 }}
+                  className="visor-input"
+                  style={{ marginBottom: 6 }}
                   autoFocus
                 />
                 {gruposExistentes.length > 0 && (
@@ -279,6 +268,7 @@ export default function TelaFormPaciente({ nomeInicial, gruposExistentes = [], o
               onChange={(v) => atualizarCampo("prioridade_clinica", v)}
               label="Prioridade clínica"
             />
+            </div>
 
             {erro && (
               <p style={{ fontSize: 15, color: "var(--visor-vermelho)", marginBottom: 10 }}>
